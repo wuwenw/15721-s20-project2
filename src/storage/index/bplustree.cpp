@@ -1,3 +1,9 @@
 #include "storage/index/bplustree.h"
 
-namespace terrier::storage::index {}
+#include <functional>
+
+namespace terrier::storage::index {
+
+
+
+}  // namespace terrier::storage::index
