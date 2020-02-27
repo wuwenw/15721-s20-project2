@@ -25,7 +25,7 @@ class InnerList
             next_ = next;
             dup_next_ = nullptr;
         }
-
+   
         bool isInDupChain(){
             return dup_next == nullptr;
         }
