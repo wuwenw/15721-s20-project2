@@ -51,7 +51,7 @@ class TreeNode
     public:
         size_t size;
         InnerList *value_list_; // list of value points
-        InnerList *ptr_list_; // list of pointers to the next treeNode
+        std::list<InnerList> *ptr_list_; // list of pointers to the next treeNode
         Map<KeyType, InnerList*> *value_node_map_;
         Map<KeyType, InnerList*> *ptr_node_map_;
         TreeNode *parent_;
@@ -65,27 +65,48 @@ class TreeNode
         }
         ~TreeNode()
         {
+            if (ptr_list != nullptr) delete ptr_list;
             delete value_node_map_;
             delete ptr_node_map_;
         }
-        bool isLeaf(){ return ptr_list_ == nullptr; }
-        InnerList *findInCurNode(KeyType key){
-            InnerList *result = nullptr;
-            for (InnerList *i = value_list_; i != nullptr; i = i->next_){
-                if (i->key == key){
-                    result - i;
-                    break;
-                }
+        bool isLeaf() { return ptr_list_ == nullptr; }
+        
+        
+        /**
+         * Recursively find the position to perform insert. 
+         * Terminate if reach the child node, insert into it
+         * otherwise find the best child node and recursively perform insertion
+         **/
+        TreeNode *Insert( KeyType key, ValueType value, size_t order ){
+            bool result = nullptr;
+            if ( isLeaf() ){
+                result = insertInCurNode(key, value);
+            }
+            else{
+                TreeNode *child_node = findBestFitChild(KeyType key);
+                result = chld_node->Insert(key, value, order);
             }
             return result;
         }
+
+        TreeNode *InsertUnique( KeyType key, ValueType value, size_t order ){
+            // TODO: implement unique insertion
+            return Insert(key, value, order);
+        }
+        TreeNode *Delete( KeyType key, ValueType value, size_t order ){
+            return nullptr;
+        }
+	    ValueType Find( KeyType key );
+
+
+        private:
         TreeNode *insertInCurNode( KeyType key, ValueType val){
             TreeNode *result = nullptr;
             InnerList *cur = value_list_;
             InnerList *next = nullptr;
             while (cur != nullptr){
                 // if contains key just append in the key linked list
-                if (cur->key == key){
+                if (cur->key_ == key){
                     bool sub_res = cur->InsertDup(key, val);
                     if (!sub_res) return result;
                     result = this;
@@ -94,13 +115,13 @@ class TreeNode
                     
                     // else, find best fit point to insert a new node
                     next = cur ->next_;
-                    if (next != nullptr && next->key <= key) cur = cur->next_;
+                    if (next != nullptr && next->key_ <= key) cur = cur->next_;
                     else{
                         // construct a new node
                         InnerList *new_list = new ListNode(key, value);
                         if (new_list == nullptr) return result;
                         // if should insert at the front
-                        if (cur->key > key){
+                        if (cur->key_ > key){
                             
                             new_list->next_ = cur;
                             cur->prev_ = new_list; 
@@ -129,32 +150,37 @@ class TreeNode
             return this;
         }
         /**
-         * Recursively find the position to perform insert. 
-         * Terminate if:
-         * - reach the child node 
-         * 
-         * 
+         * Assuming that current node is not leaf node
          **/
-        TreeNode *Insert( KeyType key, ValueType value, size_t order ){
-            bool result = nullptr;
-            if ( isLeaf() ){
-                result = insertInCurNode(key, value);
+        InnerList *findBestFitChild(KeyType key) {
+            InnerList *cur_val = value_list_;
+            InnerList *next_val;
+            std::list<InnerList*>::iterator ptr_iter = ptr_list_.begin();
+            while (cur_val != nullptr){
+                if (cur_val->key_ > key){
+                    return *ptr_iter;
+                }
+                ++ptr_iter;
+                next_val = cur_val->next_;
+                if(next_val->key_ == nullptr) return *ptr_iter;
+                else if (next_val->key_ > key) return *ptr_iter;
+                else cur_val = next_val;
             }
-            else{
-                TreeNode *child_node = findBestFitChild(KeyType key);
-                result = chld_node->Insert(key, value, order);
+        }
+
+        InnerList *findInCurNode(KeyType key){
+            InnerList *result = nullptr;
+            for (InnerList *i = value_list_; i != nullptr; i = i->next_){
+                if (i->key_ == key){
+                    result - i;
+                    break;
+                }
             }
             return result;
         }
 
-        TreeNode *InsertUnique( KeyType key, ValueType value, size_t order ){
-            // TODO: implement unique insertion
-            return Insert(key, value, order);
-        }
-        TreeNode *Delete( KeyType key, ValueType value, size_t order ){
-            return nullptr;
-        }
-	    ValueType Find( KeyType key );
+        InnerList *Split();
+        InnerList *Merge();
 };
 
 template <typename KeyType, typename ValueType, typename KeyComparator = std::less<KeyType>,
@@ -171,9 +197,23 @@ class BPlusTree
             order_ = order;
         }
 
-        InnerList *rebalanceTree(TreeNode *leafNode, KeyType key, ValueType value){
+        InnerList *rebalanceTree(TreeNode *leaf_node, KeyType key, ValueType value){
             // wrapper for recursively rebalance the tree 
+            // check if really neet to split
+            if (leaf_node->size <= order) return root;
+            // if size exceeds, pop the middle element going from child to parent
+            TreeNode *cur_node = leaf_node;
+            TreeNode *parent_node = cur_node->parent;
+            while (cur_node != root){
+                // find the middle value to split
+                // split the value list into two
+                if( cur_node->isLeaf()){
+                    
+                }
+                else{
 
+                }
+            }
             // rollback if any steps fail
 
             // return the new root
