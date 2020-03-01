@@ -278,14 +278,21 @@ class TreeNode {
         cur_index ++;
     }
     // create a new TreeNode that has the same parent
-    TreeNode *new_tree_node = new TreeNode(node->parent_);
+    TreeNode *right_tree_node = new TreeNode(node->parent_);
+    TreeNode left_tree_node = node;
+    if (right_tree_node == nullptr) return nullptr;
     if (node->isLeaf()) {
         // configure value list 
+        right_tree_node->value_list_ = split_list;
+        right_tree_node->value_list_end = left_tree_node->value_list_end_;
+        left_tree_node->value_list_end_ = split_list->prev_;
         // configure size 
-
+        right_tree_node->size = left_tree_node->size - cur_index;
+        left_tree_node->size = cur_index;
     }
     else{
         // if none leaf node 
+        // configure the value list
         // pop the value out of the value list
         // configure size
         // configure ptr_list
