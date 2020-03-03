@@ -50,7 +50,7 @@ class BPlusTreeIndex final : public Index {
                    "This Insert is designed for secondary indexes with no uniqueness constraints.");
     KeyType index_key;
     index_key.SetFromProjectedRow(tuple, metadata_, metadata_.GetSchema().GetColumns().size());
-    const bool result = bplustree_->Insert( tuple, location );
+    const bool result = bplustree_->Insert( index_key, location );
 
     TERRIER_ASSERT(
         result,
@@ -80,7 +80,8 @@ class BPlusTreeIndex final : public Index {
 
     // FIXME(15-721 project2): perform a non-unique CONDITIONAL insert into the underlying data structure of the
     // key/value pair
-    const bool result = bplustree_->ConditionalInsert(index_key, location, predicate, &predicate_satisfied);
+    // if value already exists, insertion fails
+    const bool result = bplustree_->InsertUnique(index_key, location);
 
     TERRIER_ASSERT(predicate_satisfied != result, "If predicate is not satisfied then insertion should succeed.");
 

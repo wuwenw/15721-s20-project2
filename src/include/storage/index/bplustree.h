@@ -14,8 +14,8 @@ class InnerList {
   std::vector<ValueType> *same_key_values_;
 
   InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) {
-    *key_ = key;
-    *value_ = val;
+    key_ = key;
+    value_ = val;
     prev_ = prev;
     next_ = next;
     same_key_values_ = new std::vector<ValueType>();
@@ -23,8 +23,8 @@ class InnerList {
   }
 
   InnerList(InnerList *reference) {
-    *key_ = reference->key_;
-    *value_ = reference->value_;
+    key_ = reference->key_;
+    value_ = reference->value_;
     prev_ = reference->prev_;
     next_ = reference->next_;
     same_key_values_ = new std::vector<ValueType>();
@@ -151,21 +151,17 @@ class TreeNode {
    * Terminate if reach the child node, insert into it
    * otherwise find the best child node and recursively perform insertion
    **/
-  TreeNode *Insert(InnerList *new_value) {
+  TreeNode *Insert(InnerList *new_value, bool allow_dup = true) {
     bool result = nullptr;
     if (isLeaf()) {
-      result = insertAtLeafNode(new_value);
+      result = insertAtLeafNode(new_value, allow_dup);
     } else {
       TreeNode *child_node = findBestFitChild(new_value->key_);
-      result = child_node->Insert(new_value);
+      result = child_node->Insert(new_value, allow_dup);
     }
     return result;
   }
 
-  TreeNode *InsertUnique(InnerList *new_value) {
-    // TODO: implement unique insertion
-    return Insert(new_value);
-  }
   TreeNode *Delete(KeyType key, ValueType value) { return nullptr; }
 
   // going from leaf to root, recursively split child, insert a new node at parent
@@ -217,7 +213,7 @@ class TreeNode {
     return cur;
   }
   // assuming this is a leafNode
-  TreeNode *insertAtLeafNode(InnerList *new_list) {
+  TreeNode *insertAtLeafNode(InnerList *new_list, bool allow_dup = true) {
     KeyType key = new_list->key_;
     ValueType val = new_list->value_;
     TreeNode *result = nullptr;
@@ -226,8 +222,13 @@ class TreeNode {
     while (cur != nullptr) {
       // if contains key just append in the key linked list
       if (cur->key_ == key) {
-        bool sub_res = cur->InsertDup(new_list);
-        result = this;
+        if (allow_dup || (!ContainDupValue(val))) {
+          bool sub_res = cur->InsertDup(new_list);
+          result = this;
+        }
+        else{
+          return nullptr;
+        }
       } else {
         // else, find best fit point to insert a new node
         next = cur->next_;
@@ -253,6 +254,12 @@ class TreeNode {
       }
     }
     return this;
+  }
+  bool ContainDupValue(ValueType value) {
+    for (int i = 0; i < this->same_key_values_.size(); i ++) {
+      if ((*(this->same_key_values_[])) == value) return true;
+    }
+    return false;
   }
   /**
    * Assuming that current node is not leaf node
@@ -476,7 +483,18 @@ class BPlusTree {
     TreeNode *new_root = nullptr;
     InnerList *new_value = new InnerList(key, value);
     if (new_value == nullptr) return false;
-    root->Insert(key, new_value);
+    root->Insert(key, new_value, true);
+    new_root = RebalanceTree(result, key, value);
+    if (new_root == nullptr) return false;
+    root = new_root;
+    return true;
+  }
+  bool InsertUnique(KeyType key, ValueType value) {
+    bool result = false;
+    TreeNode *new_root = nullptr;
+    InnerList *new_value = new InnerList(key, value);
+    if (new_value == nullptr) return false;
+    root->Insert(key, new_value, false);
     new_root = RebalanceTree(result, key, value);
     if (new_root == nullptr) return false;
     root = new_root;
