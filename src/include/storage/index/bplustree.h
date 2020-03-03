@@ -72,28 +72,27 @@ class InnerList {
   // set poped prev next to null
   // re link the linked list
   // return the poped linked list
-  InnerList *PopListHere(InnerList *cur_node) {
-      if (cur_node == nullptr) {
-          return nullptr;
-      }
-      InnerList *prev = cur_node->prev_;
-      InnerList next = cur_node->next_;
-      cur_node->prev_ = nullptr;
-      cur_node->next_ = nullptr;
-      prev->next_ = next;
-      next->prev_ = prev;
-      return cur_node;
+  InnerList *PopListHere() {
+    InnerList *cur_node = this;
+    InnerList *prev = cur_node->prev_;
+    InnerList next = cur_node->next_;
+    cur_node->prev_ = nullptr;
+    cur_node->next_ = nullptr;
+    prev->next_ = next;
+    next->prev_ = prev;
+    return cur_node;
   }
   // detach the linked list from current node left
   // return the ptr to the new right side
-  InnerList *DetachListHere(InnerList *cur_node) {
-      InnerList right_start = cur_node;
-      if (cur_node->prev_ != nullptr){
-          InnerList *left = cur_node->prev_;
-          left->next_ = nullptr;
-      }
-      cur_node->prev_ = nullptr;
-      return cur_node;
+  InnerList *DetachListHere() {
+    InnerList *cur_node = this;
+    InnerList right_start = cur_node;
+    if (cur_node->prev_ != nullptr) {
+      InnerList *left = cur_node->prev_;
+      left->next_ = nullptr;
+    }
+    cur_node->prev_ = nullptr;
+    return cur_node;
   }
 };
 
@@ -103,8 +102,8 @@ template <typename KeyType, typename ValueType, typename KeyComparator = std::le
 class TreeNode {
  public:
   size_t size;
-  InnerList *value_list_;            // list of value points
-  InnerList *value_list_end_;        // Only leaf node, mark the end of the current node value list
+  InnerList *value_list_;              // list of value points
+  InnerList *value_list_end_;          // Only leaf node, mark the end of the current node value list
   std::vector<TreeNode *> *ptr_list_;  // list of pointers to the next treeNode
   TreeNode *parent_;
 
@@ -168,7 +167,7 @@ class TreeNode {
       if (new_root == nullptr) {
         return RestoreTreeFromNode(left_child, right_child, restore_stack);
       }
-      ConfigureNewSplitNode(new_root, split_value_list, left_child, right_child);
+      new_root->ConfigureNewSplitNode(split_value_list, left_child, right_child);
       return new_root
     }
 
@@ -177,7 +176,7 @@ class TreeNode {
       if (!ShouldSplit(order)) return root_node;
     } else {
       // insert the new node in current
-      ConfigureNewSplitNode(cur_node, split_value_list, left_child, right_child);
+      cur_node->ConfigureNewSplitNode(split_value_list, left_child, right_child);
     }
     // check if need to split
     if (!ShouldSplit(order)) {
@@ -189,7 +188,7 @@ class TreeNode {
     if (split_res == nullptr) {
       return RestoreTreeFromNode(left_node, right_node, restore_stack);
     }
-    return Split(cur_res->parent, root_node, order, restore_stack, split_res->split_value, split_res->left_child,
+    return Split(split_res->parent, root_node, order, restore_stack, split_res->split_value, split_res->left_child,
                  split_res->right_child);
   }
 
@@ -241,7 +240,7 @@ class TreeNode {
   TreeNode *findBestFitChild(KeyType key) {
     InnerList *cur_val = value_list_;
     InnerList *next_val;
-    std::list<TreeNode *>::iterator ptr_iter = ptr_list_.begin();
+    std::list<TreeNode *>::iterator ptr_iter = ptr_list_.begin(); // left side of the ptr list
     while (cur_val != nullptr) {
       if (cur_val->key_ > key) {
         return *ptr_iter;
@@ -260,11 +259,53 @@ class TreeNode {
   TreeNode *RestoreTreeFromNode(TreeNode *left_node, TreeNode *right_node, vector<InnerList *> restore_stack);
   // configure a new node, insert split value, left child, right child
   // return the finished node
-  void ConfigureNewSplitNode(TreeNode *new_node, InnerList *split_value_list, TreeNode *left_child,
+  void ConfigureNewSplitNode(InnerList *split_value_list, TreeNode *left_child,
                              TreeNode *right_child) {
-    new_node->InsertValueBackward(split_value_list, left_child, right_child);
-    return new_node;
+    // case 1, the node to config is an empty node
+    if (this->size == 0) {
+      this->value_list_ = split_value_list;
+      this->ptr_list_.push_back(left_child);
+      this->ptr_list_.push_back(right_child);
+    }
+    // case 2, the node to config is in a parent level
+    else {
+      // find a position to insert value into
+      InnerList *cur_value = value_list_;
+      std::vector<TreeNode*>::iterator ptr_list_iter = this->ptr_list_->begin();
+      // lterate untill theoriginal ptr position using left node as original node
+      while ((*ptr_list_iter) != left_node) {
+        next_value = cur_value->next_;
+        ++ptr_list_iter;
+      }
+      // insert right ptr at the right of current left ptr
+      ++ptr_list_iter;
+      // insert the new value into the value list
+      // if at the end of the value list insert at the back of the value list
+      if (cur_value == nullptr) {
+        TERRIER_ASSERT(ptr_list_iter == this->ptr_list_.end(), "insert should at the ptr end when cur_value is null");
+        InnerList *end = this->value_list_end_;
+        end->InsertBack(split_value_list);
+        this->value_list_end_ = end->next_;
+      }
+      // if at the start of the value_list insert at the very front
+      else if (cur_value->prev_ == nullptr) {
+        TERRIER_ASSERT(ptr_list_iter == this->ptr_list_.begin(), "insert should at the ptr start when cur_value->prev_ is null");
+        TERRIER_ASSERT(cur_value == this->value_list_, "cur_value should also point to value_list_ start");
+        this->value_list_->InsertFront(split_value_list);
+        this->value_list_ = this->value_list_->prev_;
+      }
+      // if at the middle of the value_list, insert at the front 
+      // as the ptr_list is the left of the real value
+      else{
+        cur_value->InsertFront(split_value_list);
+      }
+      // insert the new right side pointer
+      this->ptr_list_.insert(ptr_list_iter, right_child);
+    }
+    // increase the current node size as we insert a new value
+    this.size ++;
   }
+
   // assume the node exceeds capacity
   // split the current node into two for left and non-leaf
   SplitReturn *SplitNode(TreeNode node) {
@@ -274,34 +315,52 @@ class TreeNode {
     InnerList split_list = value_list_;
     // get the split_list location
     while (cur_index != split_index) {
-        split_list = split->next_;
-        cur_index ++;
+      split_list = split->next_;
+      cur_index++;
     }
     // create a new TreeNode that has the same parent
     TreeNode *right_tree_node = new TreeNode(node->parent_);
     TreeNode left_tree_node = node;
     if (right_tree_node == nullptr) return nullptr;
-    if (node->isLeaf()) {
-        // configure value list 
-        right_tree_node->value_list_ = split_list;
-        right_tree_node->value_list_end = left_tree_node->value_list_end_;
-        left_tree_node->value_list_end_ = split_list->prev_;
-        // configure size 
-        right_tree_node->size = left_tree_node->size - cur_index;
-        left_tree_node->size = cur_index;
-    }
-    else{
-        // if none leaf node 
-        // configure the value list
-        // pop the value out of the value list
-        // configure size
-        // configure ptr_list
+    result.parent = left_tree_node->parent_;
+    result.left_child = left_tree_node;
+    result.right_child = right_tree_node;
 
+    if (node->isLeaf()) {
+      InnerList *split_value = new InnerList(split_list);
+      if (split_value == nullptr) return nullptr;
+      split_value->dup_list_ = nullptr;  // value to be inserted to parent node, only key matters
+      // configure value list
+      right_tree_node->value_list_ = split_list;
+      right_tree_node->value_list_end = left_tree_node->value_list_end_;
+      left_tree_node->value_list_end_ = split_list->prev_;
+      // configure size
+      right_tree_node->size = left_tree_node->size - cur_index;
+      left_tree_node->size = cur_index;
+      result.split_value = split_value;
+    } else {
+      // if none leaf node
+      // configure the value list pop the value out of the value list
+      right_tree_node->value_list_ = split_list->next_;
+      right_tree_node->value_list_end_ = left_tree_node->value_list_end_;
+      left_tree_node->value_list_end = split_list->prev_;
+      // configure ptr_list
+      // cur_index is the left ptr in the poped node
+      // should remain at the left side, right node keeps everything from cur_index + 1
+      size_t popping_index = left_tree_node->size;  // ptr lise has size + 1 ptrs
+      InnerList *tmp_ptr;
+      while (popping_index > cur_index) {
+        tmp_ptr = left_tree_node->ptr_list_.pop_back();
+        right_tree_node->ptr_list_->insert(right_tree_node->ptr_list_->begin(), tmp_ptr);
+        popping_index--;
+      }
+      // configure size
+      right_tree_node->size = left_tree_node->size - cur_index - 1;  // middle value is poped out
+      left_tree_node->size = cur_index;
+      result.split_value = split_list->DetachListHere();
     }
     return &result;
   }
-
-
 };
 
 template <typename KeyType, typename ValueType, typename KeyComparator = std::less<KeyType>,
