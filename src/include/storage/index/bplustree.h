@@ -206,15 +206,15 @@ class TreeNode {
                  split_res->right_child);
   }
 
-  void GetValueRecursive(TreeNode *node, KeyType index_key, std::vector<ValueType> &results) {
+  TreeNode *GetNodeRecursive(TreeNode *node, KeyType index_key) {
     if (isLeaf()) {
-      if (index_key != node->value_list_->key_) { return; }
-      results = node->value_list_->GetAllValues();
+      return node;
     } else {
       TreeNode *child_node = findBestFitChild(index_key);
-      GetValueRecursive(child_node, index_key, results);
+      GetNodeRecursive(child_node, index_key);
     }
   }
+
 
  private:
   InnerList *GetEndValue() {
@@ -494,7 +494,41 @@ class BPlusTree {
   }
 
   void GetValue(KeyType index_key, std::vector<ValueType> &results) {
-    GetValueRecursive(root, index_key, results);
+    TreeNode *target_node = GetNodeRecursive(root, index_key);
+    InnerList *cur = target_node->value_list_;
+    while (cur != nullptr) {
+      if (index_key == cur->key_) {
+        results = cur->GetAllValues();
+        break;
+      }
+      cur = cur->next_;
+    }
+
+  }
+
+  void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> &results) {
+    TreeNode *cur_node = GetNodeRecursive(root, index_low_key);
+    InnerList *cur = cur_node->value_list_;
+    while (cur != nullptr) {
+      if (index_low_key <= cur->key_) {
+        break;
+      }
+      cur = cur->next_;
+    }
+
+    while (cur_node != nullptr) {
+      cur = cur_node->value_list_;
+      while (cur != nullptr) {
+        if (cur->key_ > index_high_key) return;
+        if (cur->key_ >= index_low_key) {
+          results.reserve(results.size() + cur->GetAllValues().size());
+          results.insert(results.end(), cur->GetAllValues().begin(), cur->GetAllValues().end());
+        }
+        cur = cur->next_;
+      }
+      cur_node = cur_node->sibling_;
+    }
+
   }
 
  private:
