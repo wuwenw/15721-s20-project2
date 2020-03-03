@@ -216,6 +216,16 @@ class TreeNode {
                  split_res->right_child);
   }
 
+  void GetValueRecursive(TreeNode *node, KeyType index_key, std::vector<ValueType> &results) {
+    if (isLeaf()) {
+      if (index_key != node->value_list_->key_) { return; }
+      results = node->value_list_->GetAllValues();
+    } else {
+      TreeNode *child_node = findBestFitChild(index_key);
+      GetValueRecursive(child_node, index_key, results);
+    }
+  }
+
  private:
   // assuming this is a leafNode
   TreeNode *insertAtLeafNode(InnerList *new_list) {
@@ -478,6 +488,10 @@ class BPlusTree {
     if (new_root == nullptr) return false;
     root = new_root;
     return true;
+  }
+
+  void GetValue(KeyType index_key, std::vector<ValueType> &results) {
+    GetValueRecursive(root, index_key, results);
   }
 
  private:
