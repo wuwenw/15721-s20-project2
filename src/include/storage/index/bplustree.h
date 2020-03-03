@@ -29,6 +29,20 @@ class InnerList {
     next_ = reference->next_;
     dup_next_ = reference->dup_next_;
   }
+  ~InnerList() {
+    InnerList *dup = dup_next_;
+    InnerList *next;
+    while (dup != nullptr) {
+      next = dup->next_;
+      delete dup;
+      dup = next;
+    }
+    // TODO: do we need the two?
+    /*
+    delete key_;
+    delete value_;
+    */
+  }
 
   // insert at the fron of the current value node
   void InsertFront(InnerList *new_value) {
@@ -78,8 +92,8 @@ class InnerList {
     InnerList next = cur_node->next_;
     cur_node->prev_ = nullptr;
     cur_node->next_ = nullptr;
-    prev->next_ = next;
-    next->prev_ = prev;
+    if (prev != nullptr) prev->next_ = next;
+    if (next != nullptr) next->prev_ = prev;
     return cur_node;
   }
   // detach the linked list from current node left
@@ -121,7 +135,18 @@ class TreeNode {
       ptr_list_ = new vector<InnerList *>();
     }
   }
-  ~TreeNode() {}
+  ~TreeNode() {
+    InnerList *tmp_list;
+    while (value_list_ != null && value_list_ != value_list_end_) {
+      tmp_list = *value_list_;
+      value_list_ = value_list_->next_;
+      delete tmp_list;
+    }
+    for (int i = 0; i < ptr_list_->size(); i++) {
+      delete (*ptr_list_)[i];
+    }
+    delete ptr_list_;
+  }
 
   typedef struct SplitReturn {
     InnerList *split_value;
@@ -165,7 +190,7 @@ class TreeNode {
       TreeNode *new_root = new TreeNode(nullptr);
       // if the creation fails
       if (new_root == nullptr) {
-        return RestoreTreeFromNode(left_child, right_child, restore_stack);
+        return this->RestoreTreeFromNode(left_child, right_child, restore_stack);
       }
       new_root->ConfigureNewSplitNode(split_value_list, left_child, right_child);
       return new_root
@@ -186,7 +211,7 @@ class TreeNode {
     SplitReturn *split_res = SplitNode(cur_node);
     // fail to split into two nodes
     if (split_res == nullptr) {
-      return RestoreTreeFromNode(left_node, right_node, restore_stack);
+      return this->RestoreTreeFromNode(left_node, right_node, restore_stack);
     }
     return Split(split_res->parent, root_node, order, restore_stack, split_res->split_value, split_res->left_child,
                  split_res->right_child);
@@ -240,7 +265,7 @@ class TreeNode {
   TreeNode *findBestFitChild(KeyType key) {
     InnerList *cur_val = value_list_;
     InnerList *next_val;
-    std::list<TreeNode *>::iterator ptr_iter = ptr_list_.begin(); // left side of the ptr list
+    std::list<TreeNode *>::iterator ptr_iter = ptr_list_.begin();  // left side of the ptr list
     while (cur_val != nullptr) {
       if (cur_val->key_ > key) {
         return *ptr_iter;
@@ -256,11 +281,78 @@ class TreeNode {
     }
   }
   // return the top node and recursively restore child according to restoring stack
-  TreeNode *RestoreTreeFromNode(TreeNode *left_node, TreeNode *right_node, vector<InnerList *> restore_stack);
+  TreeNode *RestoreTreeFromNode(TreeNode *left_node, TreeNode *right_node, vector<InnerList *> restore_stack) {
+    // pop the restoring value
+    InnerList *split_list = restore_stack.pop_back();
+
+    // delete the split value in current node if there is any
+    InnerList *cur_val = this->value_list_;
+    while (cur_val != nullptr) {
+      if (cur_val->key_ == split_list->key_) {
+        TERRIER_ASSERT(cur_val == split_list,
+                       "the value targeting to be removed should be the same as the one in the restore stack");
+        cur_val->PopListHere();
+        break;
+      }
+      cur_val = cur_val->next_;
+    }
+    // if not leaf node
+    // delete the right node from ptr list if there is any
+    if (!this->isLeaf()) {
+      TERRIER_ASSERT(this->ptr_list != nullptr, "When it is no leaf ptr_list should not be null");
+      std::vector<TreeNode *>::iterator ptr_iter = this.ptr_list_->begin();
+      while (ptr_iter != this->ptr_list_->end()) {
+        if (*ptr_iter == right_node) {
+          this->ptr_list_->erase(ptr_iter);
+          break;
+        }
+        ++ptr_iter;
+      }
+    }
+
+    // merge left node with right node:
+    merge(left_node, right_node);
+    // merge values together
+    // if not leaf node, merge ptr list
+
+    // recursively call left child to restore
+    TreeNode child_left = nullptr;
+    TreeNode child_right = nullptr;
+    int index = 0;
+    if (!left_node->isLeaf()) {
+      InnerList *child_split_list = restore_stack.back();
+      while (left_node->value_list_[index]->key_ != child_split_list->key_) {
+        index++;
+      }
+      child_left = left_node->ptr_list_[index];
+      child_right = left_node->ptr_list_[index + 1];
+    }
+    left_node->RestoreTreeFromNode(child_left, child_right, restore_stack);
+    // return restored top node which is this
+    return this;
+    ;
+  }
+
+  void merge(TreeNode *left_node, TreeNode *right_node) {
+    TERRIER_ASSERT(left_node->isLeaf() == right_node->isLeaf(),
+                   "THe merging two nodes should be both leaf or both non-leaf");
+
+    left_node->value_list_end_->InsertBack(right_node->value_list_) left_node->value_list_end_ =
+        right_node->value_list_end_;
+    right_node->value_list_ = nullptr;  // TODO: prevent deletion of values
+
+    // if non-leaf, merge the ptr list
+    if (!left_node->isLeaf()) {
+      left_node->ptr_list_->insert(left_node->ptr_list_->end(), right_node->ptr_list_->begin(),
+                                   right_node->ptr_list_->end());
+      // TODO: not sure should invalidate the right ptr list in order to prevent its inner element currently in left
+      // gets invalidated
+    }
+    delete right_node;
+  }
   // configure a new node, insert split value, left child, right child
   // return the finished node
-  void ConfigureNewSplitNode(InnerList *split_value_list, TreeNode *left_child,
-                             TreeNode *right_child) {
+  void ConfigureNewSplitNode(InnerList *split_value_list, TreeNode *left_child, TreeNode *right_child) {
     // case 1, the node to config is an empty node
     if (this->size == 0) {
       this->value_list_ = split_value_list;
@@ -271,7 +363,7 @@ class TreeNode {
     else {
       // find a position to insert value into
       InnerList *cur_value = value_list_;
-      std::vector<TreeNode*>::iterator ptr_list_iter = this->ptr_list_->begin();
+      std::vector<TreeNode *>::iterator ptr_list_iter = this->ptr_list_->begin();
       // lterate untill theoriginal ptr position using left node as original node
       while ((*ptr_list_iter) != left_node) {
         next_value = cur_value->next_;
@@ -289,21 +381,22 @@ class TreeNode {
       }
       // if at the start of the value_list insert at the very front
       else if (cur_value->prev_ == nullptr) {
-        TERRIER_ASSERT(ptr_list_iter == this->ptr_list_.begin(), "insert should at the ptr start when cur_value->prev_ is null");
+        TERRIER_ASSERT(ptr_list_iter == this->ptr_list_.begin(),
+                       "insert should at the ptr start when cur_value->prev_ is null");
         TERRIER_ASSERT(cur_value == this->value_list_, "cur_value should also point to value_list_ start");
         this->value_list_->InsertFront(split_value_list);
         this->value_list_ = this->value_list_->prev_;
       }
-      // if at the middle of the value_list, insert at the front 
+      // if at the middle of the value_list, insert at the front
       // as the ptr_list is the left of the real value
-      else{
+      else {
         cur_value->InsertFront(split_value_list);
       }
       // insert the new right side pointer
       this->ptr_list_.insert(ptr_list_iter, right_child);
     }
     // increase the current node size as we insert a new value
-    this.size ++;
+    this.size++;
   }
 
   // assume the node exceeds capacity
@@ -374,6 +467,7 @@ class BPlusTree {
     order_ = order;
     root = new TreeNode(nullptr);
   }
+  ~BPlusTree() { delete root; }
 
   bool Insert(KeyType key, ValueType value) {
     bool result = false;
