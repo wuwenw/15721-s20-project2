@@ -1,6 +1,5 @@
-#include <map>
 #include <vector>
-#include "index.h"
+#include "storage/index/index.h"
 
 namespace terrier::storage::index {
 template <typename KeyType, typename ValueType, typename KeyComparator = std::less<KeyType>,
@@ -66,20 +65,10 @@ class InnerList {
     new_value->prev_ = cur_value;
   }
 
-  bool isInDupChain() { return dup_next == nullptr; }
-
   void InsertDup(InnerList *new_value) {
-    InnerList *cur = this;
-    InnerList *next = dup_next_;
-    if (next == nullptr) {
-      dup_next = new_value;
-      return;
-    }
-    while (next != nullptr) {
-      cur = next;
-      next = cur->dup_next_;
-    }
-    cur->dup_next_ = new_value;
+    this->same_key_values_.push_back(*(new_value->value_));
+    new_value->value_ = nullptr;
+    delete new_value;
   }
   // pop the current node from linked list
   // set poped prev next to null
@@ -116,11 +105,12 @@ class TreeNode {
  public:
   size_t size;
   InnerList *value_list_;              // list of value points
-  InnerList *value_list_end_;          // Only leaf node, mark the end of the current node value list
   std::vector<TreeNode *> *ptr_list_;  // list of pointers to the next treeNode
   TreeNode *parent_;
+  TreeNode *sibling_;  // only leaf node has siblings
 
-  TreeNode(TreeNode *parent, value_list = nullptr, ptr_list = nullptr, parent = nullptr; sibling = nullptr) {
+  TreeNode(TreeNode *parent, InnerList *value_list = nullptr, std::vector<TreeNode *> ptr_list = nullptr,
+           TreeNode *sibling = nullptr) {
     value_list_ = value_list;
     ptr_list_ = ptr_list;
     parent_ = parent;
@@ -136,7 +126,7 @@ class TreeNode {
   }
   ~TreeNode() {
     InnerList *tmp_list;
-    while (value_list_ != null && value_list_ != value_list_end_) {
+    while (value_list_ != null) {
       tmp_list = *value_list_;
       value_list_ = value_list_->next_;
       delete tmp_list;
@@ -227,6 +217,15 @@ class TreeNode {
   }
 
  private:
+  InnerList *GetEndValue() {
+    InnerList *cur = value_list_;
+    InnerList *next = value_list_->next_;
+    while (next != nullptr) {
+      cur = next;
+      next = next->next_;
+    }
+    return cur;
+  }
   // assuming this is a leafNode
   TreeNode *insertAtLeafNode(InnerList *new_list) {
     KeyType key = new_list->key_;
@@ -257,9 +256,6 @@ class TreeNode {
           // if place between cur and next
           else {
             cur->InsertBack(new_list);
-            if (cur == value_list_end_) {
-              value_list_end_ = new_list;
-            }
             size++;
             break;
           }
@@ -346,8 +342,8 @@ class TreeNode {
     TERRIER_ASSERT(left_node->isLeaf() == right_node->isLeaf(),
                    "THe merging two nodes should be both leaf or both non-leaf");
 
-    left_node->value_list_end_->InsertBack(right_node->value_list_) left_node->value_list_end_ =
-        right_node->value_list_end_;
+    InnerList *left_end_value = left_node->GetEndValue();
+    left_end_value->InsertBack(right_node->value_list_);
     right_node->value_list_ = nullptr;  // TODO: prevent deletion of values
 
     // if non-leaf, merge the ptr list
@@ -356,6 +352,10 @@ class TreeNode {
                                    right_node->ptr_list_->end());
       // TODO: not sure should invalidate the right ptr list in order to prevent its inner element currently in left
       // gets invalidated
+    }
+    // if is leaf, merge the sibling
+    else {
+      left_node->sibling_ = right_node->sibling_;
     }
     delete right_node;
   }
@@ -384,9 +384,8 @@ class TreeNode {
       // if at the end of the value list insert at the back of the value list
       if (cur_value == nullptr) {
         TERRIER_ASSERT(ptr_list_iter == this->ptr_list_.end(), "insert should at the ptr end when cur_value is null");
-        InnerList *end = this->value_list_end_;
+        InnerList *end = this->GetEndValue();
         end->InsertBack(split_value_list);
-        this->value_list_end_ = end->next_;
       }
       // if at the start of the value_list insert at the very front
       else if (cur_value->prev_ == nullptr) {
@@ -431,21 +430,25 @@ class TreeNode {
     if (node->isLeaf()) {
       InnerList *split_value = new InnerList(split_list);
       if (split_value == nullptr) return nullptr;
-      split_value->dup_list_ = nullptr;  // value to be inserted to parent node, only key matters
-      // configure value list
+      // configure value list, break the linkedlist into two
       right_tree_node->value_list_ = split_list;
-      right_tree_node->value_list_end = left_tree_node->value_list_end_;
-      left_tree_node->value_list_end_ = split_list->prev_;
+      split_list->prev_->next_ = nullptr;
+      split_list->prev_ = nullptr;
       // configure size
       right_tree_node->size = left_tree_node->size - cur_index;
       left_tree_node->size = cur_index;
       result.split_value = split_value;
+      // configure sibling
+      right_tree_node->sibling_ = left_tree_node->sibling_;
+      left_tree_node->sibling_ = right_tree_node;
     } else {
       // if none leaf node
       // configure the value list pop the value out of the value list
       right_tree_node->value_list_ = split_list->next_;
-      right_tree_node->value_list_end_ = left_tree_node->value_list_end_;
-      left_tree_node->value_list_end = split_list->prev_;
+      split_list->next_->prev = nullptr;
+      split_list->prev_->next_ = nullptr;
+      split_list->prev_ = nullptr;
+      split_list->next_ = nullptr;
       // configure ptr_list
       // cur_index is the left ptr in the poped node
       // should remain at the left side, right node keeps everything from cur_index + 1
@@ -459,7 +462,7 @@ class TreeNode {
       // configure size
       right_tree_node->size = left_tree_node->size - cur_index - 1;  // middle value is poped out
       left_tree_node->size = cur_index;
-      result.split_value = split_list->DetachListHere();
+      result.split_value = split_list;
     }
     return &result;
   }
