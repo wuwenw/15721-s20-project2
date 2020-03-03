@@ -12,14 +12,15 @@ class InnerList {
   ValueType value_;
   InnerList *prev_;
   InnerList *next_;
-  InnerList *dup_next_;  // singly linked list for storing duplicated key
+  std::vector<ValueType> *same_key_values_;
 
   InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) {
     *key_ = key;
     *value_ = val;
     prev_ = prev;
     next_ = next;
-    dup_next_ = nullptr;
+    same_key_values_ = new std::vector<ValueType>();
+    same_key_values_->push_back(val);
   }
 
   InnerList(InnerList *reference) {
@@ -27,22 +28,20 @@ class InnerList {
     *value_ = reference->value_;
     prev_ = reference->prev_;
     next_ = reference->next_;
-    dup_next_ = reference->dup_next_;
+    same_key_values_ = new std::vector<ValueType>();
+    same_key_values_->insert(reference->same_key_values_->begin(), reference->same_key_values_->end());
   }
   ~InnerList() {
     InnerList *dup = dup_next_;
     InnerList *next;
-    while (dup != nullptr) {
-      next = dup->next_;
-      delete dup;
-      dup = next;
-    }
+    delete same_key_values_;
     // TODO: do we need the two?
     /*
     delete key_;
     delete value_;
     */
   }
+  std::vector<ValueType> GetAllValues() { return *same_key_values_; }
 
   // insert at the fron of the current value node
   void InsertFront(InnerList *new_value) {
