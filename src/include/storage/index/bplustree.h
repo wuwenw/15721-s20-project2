@@ -2,107 +2,103 @@
 #include "storage/index/index.h"
 
 namespace terrier::storage::index {
-template <typename KeyType, typename ValueType, typename KeyComparator = std::less<KeyType>,
-          typename KeyEqualityChecker = std::equal_to<KeyType>, typename KeyHashFunc = std::hash<KeyType>,
-          typename ValueEqualityChecker = std::equal_to<ValueType>>
-class InnerList {
- public:
-  KeyType key_;
-  ValueType value_;
-  InnerList *prev_;
-  InnerList *next_;
-  std::vector<ValueType> *same_key_values_;
-
-  InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) {
-    key_ = key;
-    value_ = val;
-    prev_ = prev;
-    next_ = next;
-    same_key_values_ = new std::vector<ValueType>();
-    same_key_values_->push_back(val);
-  }
-
-  InnerList(InnerList *reference) {
-    key_ = reference->key_;
-    value_ = reference->value_;
-    prev_ = reference->prev_;
-    next_ = reference->next_;
-    same_key_values_ = new std::vector<ValueType>();
-    same_key_values_->insert(reference->same_key_values_->begin(), reference->same_key_values_->end());
-  }
-  ~InnerList() {
-    InnerList *dup = dup_next_;
-    InnerList *next;
-    delete same_key_values_;
-    // TODO: do we need the two?
-    /*
-    delete key_;
-    delete value_;
-    */
-  }
-  std::vector<ValueType> GetAllValues() { return *same_key_values_; }
-
-  // insert at the fron of the current value node
-  void InsertFront(InnerList *new_value) {
-    InnerList *cur_value = this;
-    InnerList *prev = cur_value->prev_;
-    if (prev != nullptr) {
-      prev->next_ = new_value;
-    }
-    new_value->prev_ = prev;
-    new_value->next_ = cur_value;
-    cur_value->prev_ = new_value;
-  }
-
-  void InsertBack(InnerList *new_value) {
-    InnerList *cur_value = this;
-    InnerList *next = cur_value->next_;
-    if (next != nullptr) {
-      next->prev_ = new_value;
-    }
-    new_value->next_ = next;
-    cur_value->next = new_value;
-    new_value->prev_ = cur_value;
-  }
-
-  void InsertDup(InnerList *new_value) {
-    this->same_key_values_.push_back(*(new_value->value_));
-    new_value->value_ = nullptr;
-    delete new_value;
-  }
-  // pop the current node from linked list
-  // set poped prev next to null
-  // re link the linked list
-  // return the poped linked list
-  InnerList *PopListHere() {
-    InnerList *cur_node = this;
-    InnerList *prev = cur_node->prev_;
-    InnerList next = cur_node->next_;
-    cur_node->prev_ = nullptr;
-    cur_node->next_ = nullptr;
-    if (prev != nullptr) prev->next_ = next;
-    if (next != nullptr) next->prev_ = prev;
-    return cur_node;
-  }
-  // detach the linked list from current node left
-  // return the ptr to the new right side
-  InnerList *DetachListHere() {
-    InnerList *cur_node = this;
-    InnerList right_start = cur_node;
-    if (cur_node->prev_ != nullptr) {
-      InnerList *left = cur_node->prev_;
-      left->next_ = nullptr;
-    }
-    cur_node->prev_ = nullptr;
-    return cur_node;
-  }
-};
 
 template <typename KeyType, typename ValueType, typename KeyComparator = std::less<KeyType>,
           typename KeyEqualityChecker = std::equal_to<KeyType>, typename KeyHashFunc = std::hash<KeyType>,
           typename ValueEqualityChecker = std::equal_to<ValueType>>
 class TreeNode {
  public:
+  class InnerList {
+   public:
+    KeyType key_;
+    ValueType value_;
+    InnerList *prev_;
+    InnerList *next_;
+    std::vector<ValueType> *same_key_values_;
+
+    InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) {
+      key_ = key;
+      value_ = val;
+      prev_ = prev;
+      next_ = next;
+      same_key_values_ = new std::vector<ValueType>();
+      same_key_values_->push_back(val);
+    }
+
+    InnerList(InnerList *reference) {
+      key_ = reference->key_;
+      value_ = reference->value_;
+      prev_ = reference->prev_;
+      next_ = reference->next_;
+      same_key_values_ = new std::vector<ValueType>();
+      same_key_values_->insert(reference->same_key_values_->begin(), reference->same_key_values_->end());
+    }
+    ~InnerList() {
+      InnerList *next;
+      delete same_key_values_;
+      // TODO: do we need the two?
+      /*
+      delete key_;
+      delete value_;
+      */
+    }
+    std::vector<ValueType> GetAllValues() { return *same_key_values_; }
+
+    // insert at the fron of the current value node
+    void InsertFront(InnerList *new_value) {
+      InnerList *cur_value = this;
+      InnerList *prev = cur_value->prev_;
+      if (prev != nullptr) {
+        prev->next_ = new_value;
+      }
+      new_value->prev_ = prev;
+      new_value->next_ = cur_value;
+      cur_value->prev_ = new_value;
+    }
+
+    void InsertBack(InnerList *new_value) {
+      InnerList *cur_value = this;
+      InnerList *next = cur_value->next_;
+      if (next != nullptr) {
+        next->prev_ = new_value;
+      }
+      new_value->next_ = next;
+      cur_value->next = new_value;
+      new_value->prev_ = cur_value;
+    }
+
+    void InsertDup(InnerList *new_value) {
+      this->same_key_values_.push_back(*(new_value->value_));
+      new_value->value_ = nullptr;
+      delete new_value;
+    }
+    // pop the current node from linked list
+    // set poped prev next to null
+    // re link the linked list
+    // return the poped linked list
+    InnerList *PopListHere() {
+      InnerList *cur_node = this;
+      InnerList *prev = cur_node->prev_;
+      InnerList next = cur_node->next_;
+      cur_node->prev_ = nullptr;
+      cur_node->next_ = nullptr;
+      if (prev != nullptr) prev->next_ = next;
+      if (next != nullptr) next->prev_ = prev;
+      return cur_node;
+    }
+    // detach the linked list from current node left
+    // return the ptr to the new right side
+    InnerList *DetachListHere() {
+      InnerList *cur_node = this;
+      InnerList right_start = cur_node;
+      if (cur_node->prev_ != nullptr) {
+        InnerList *left = cur_node->prev_;
+        left->next_ = nullptr;
+      }
+      cur_node->prev_ = nullptr;
+      return cur_node;
+    }
+  };
   size_t size;
   InnerList *value_list_;              // list of value points
   std::vector<TreeNode *> *ptr_list_;  // list of pointers to the next treeNode
@@ -118,10 +114,10 @@ class TreeNode {
     size = 0;
     while (value_list != nullptr) {
       size++;
-      value_list = valie_list->next_;
+      value_list = value_list->next_;
     }
-    if (ptr_list_ == null_ptr) {
-      ptr_list_ = new vector<InnerList *>();
+    if (ptr_list_ == nullptr) {
+      ptr_list_ = new std::vector<InnerList *>();
     }
   }
   ~TreeNode() {
@@ -277,7 +273,7 @@ class TreeNode {
   TreeNode *findBestFitChild(KeyType key) {
     InnerList *cur_val = value_list_;
     InnerList *next_val;
-    std::list<TreeNode *>::iterator ptr_iter = ptr_list_.begin();  // left side of the ptr list
+    std::vector<TreeNode *>::iterator ptr_iter = ptr_list_.begin();  // left side of the ptr list
     while (cur_val != nullptr) {
       if (cur_val->key_ > key) {
         return *ptr_iter;
@@ -526,13 +522,6 @@ class BPlusTree {
 
   void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> &results) {
     TreeNode *cur_node = GetNodeRecursive(root, index_low_key);
-    InnerList *cur = cur_node->value_list_;
-    while (cur != nullptr) {
-      if (index_low_key <= cur->key_) {
-        break;
-      }
-      cur = cur->next_;
-    }
 
     while (cur_node != nullptr) {
       cur = cur_node->value_list_;
