@@ -11,7 +11,6 @@ class BPlusTree {
 
   class TreeNode {
    public:
-
     class InnerList {
      public:
       KeyType key_;
@@ -102,22 +101,20 @@ class BPlusTree {
         cur_node->prev_ = nullptr;
         return cur_node;
       }
-    };
-
+    };  // end class InnerList
     size_t size;
     InnerList *value_list_;              // list of value points
     std::vector<TreeNode *> *ptr_list_;  // list of pointers to the next treeNode
     TreeNode *parent_;
-    TreeNode *sibling_;  // only leaf node has siblings
     TreeNode *left_sibling_;
-
+    TreeNode *right_sibling_;  // only leaf node has siblings
     TreeNode(TreeNode *parent, InnerList *value_list = nullptr, std::vector<TreeNode *> ptr_list = nullptr,
-             TreeNode *sibling = nullptr, TreeNode *left_sibling = nullptr) {
+             TreeNode *left_sibling = nullptr, TreeNode *right_sibling = nullptr) {
       value_list_ = value_list;
       ptr_list_ = ptr_list;
       parent_ = parent;
-      sibling_ = sibling;
       left_sibling_ = left_sibling;
+      right_sibling_ = right_sibling;
       size = 0;
       while (value_list != nullptr) {
         size++;
@@ -149,13 +146,18 @@ class BPlusTree {
 
     bool isLeaf() { return ptr_list_ == nullptr; }
     bool ShouldSplit(size_t order) { return size > order; }
+    InnerList *CreateList(KeyType key, ValueType val) {
+      InnerList *res = new InnerList(key, val);
+      return res;
+    }
     /**
      * Recursively find the position to perform insert.
      * Terminate if reach the child node, insert into it
      * otherwise find the best child node and recursively perform insertion
      **/
-    TreeNode *Insert(InnerList *new_value, bool allow_dup = true) {
-      TreeNode * result = nullptr;
+    TreeNode *Insert(KeyType key, ValueType val, bool allow_dup = true) {
+      TreeNode *result = nullptr;
+      InnerList *new_value = new InnerList(key, val);
       if (isLeaf()) {
         result = insertAtLeafNode(new_value, allow_dup);
       } else {
@@ -166,6 +168,10 @@ class BPlusTree {
     }
 
     TreeNode *Delete(KeyType key, ValueType value) { return nullptr; }
+    TreeNode *SplitWrapper(TreeNode *cur_node, TreeNode *root_node, size_t order) {
+      std::vector<TreeNode::InnerList *> restore_stack;
+      return Split(cur_node, root_node, order, restore_stack);
+    }
 
     // going from leaf to root, recursively split child, insert a new node at parent
     // in case split fails at current level, return nullptr, restore  tree from failed node
@@ -226,8 +232,7 @@ class BPlusTree {
         // if contains key just append in the key linked list
         if (cur->key_ == key) {
           if (allow_dup || (!ContainDupValue(val))) {
-            bool sub_res = cur->InsertDup(new_list);
-            result = this;
+            cur->InsertDup(new_list);
           } else {
             return nullptr;
           }
@@ -259,7 +264,7 @@ class BPlusTree {
     }
     bool ContainDupValue(ValueType value) {
       for (int i = 0; i < this->same_key_values_.size(); i++) {
-        if ((*(this->same_key_values_[i])) == value) return true;
+        if ((*this->same_key_values_)[i] == value) return true;
       }
       return false;
     }
@@ -354,7 +359,7 @@ class BPlusTree {
       }
       // if is leaf, merge the sibling
       else {
-        left_node->sibling_ = right_node->sibling_;
+        left_node->right_sibling_ = right_node->right_sibling_;
       }
       delete right_node;
     }
@@ -373,8 +378,8 @@ class BPlusTree {
         InnerList *cur_value = value_list_;
         auto ptr_list_iter = this->ptr_list_->begin();
         // lterate untill theoriginal ptr position using left node as original node
-        while ((*ptr_list_iter) != left_node) {
-          next_value = cur_value->next_;
+        while ((*ptr_list_iter) != left_child) {
+          cur_value = cur_value->next_;
           ++ptr_list_iter;
         }
         // insert right ptr at the right of current left ptr
@@ -438,8 +443,8 @@ class BPlusTree {
         left_tree_node->size = cur_index;
         result.split_value = split_value;
         // configure sibling
-        right_tree_node->sibling_ = left_tree_node->sibling_;
-        left_tree_node->sibling_ = right_tree_node;
+        right_tree_node->right_sibling_ = left_tree_node->right_sibling_;
+        left_tree_node->right_sibling_ = right_tree_node;
         right_tree_node->left_sibling_ = left_tree_node;
       } else {
         // if none leaf node
@@ -466,39 +471,27 @@ class BPlusTree {
       }
       return &result;
     }
-  };
+  };  // end TreeNode
 
   TreeNode *root;  // with parent node as empty for root
   size_t order_;
 
-  BPlusTree(size_t order_) {
+  BPlusTree(size_t order) {
     order_ = order;
     root = new TreeNode(nullptr);
   }
   ~BPlusTree() { delete root; }
 
-  bool Insert(KeyType key, ValueType value) {
+  bool Insert(KeyType key, ValueType value, bool allow_dup = true) {
     bool result = false;
     TreeNode *new_root = nullptr;
-    TreeNode::InnerList *new_value = new TreeNode::InnerList(key, value);
-    if (new_value == nullptr) return false;
-    root->Insert(key, new_value, true);
+    root->Insert(key, value, allow_dup);
     new_root = RebalanceTree(result, key, value);
     if (new_root == nullptr) return false;
     root = new_root;
     return true;
   }
-  bool InsertUnique(KeyType key, ValueType value) {
-    bool result = false;
-    TreeNode *new_root = nullptr;
-    TreeNode::InnerList *new_value = new TreeNode::InnerList(key, value);
-    if (new_value == nullptr) return false;
-    root->Insert(key, new_value, false);
-    new_root = RebalanceTree(result, key, value);
-    if (new_root == nullptr) return false;
-    root = new_root;
-    return true;
-  }
+  bool InsertUnique(KeyType key, ValueType value) { return Insert(key, value, false); }
 
   void GetValue(KeyType index_key, std::vector<ValueType> &results) {
     TreeNode *target_node = GetNodeRecursive(root, index_key);
@@ -551,11 +544,10 @@ class BPlusTree {
 
  private:
   mutable common::SpinLatch latch_;
-  InnerList *RebalanceTree(TreeNode *leaf_node) {
+  TreeNode *RebalanceTree(TreeNode *leaf_node) {
     // wrapper for recursively rebalance the tree
     // if size exceeds, pop the middle element going from child to parent
-    vector<InnerList *> restore_stack;
-    return Split(left_node, root, order *, restore_stack);
+    return SplitWrapper(leaf_node, root, order_);
   }
 };
 }  // namespace terrier::storage::index
