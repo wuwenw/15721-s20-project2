@@ -17,17 +17,16 @@ class BPlusTree {
       ValueType value_;
       InnerList *prev_;
       InnerList *next_;
-      std::vector<ValueType> *same_key_values_;
+      std::vector<ValueType> same_key_values_;
       // standard constructor using key and value
       InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) {
         key_ = key;
         value_ = val;
         prev_ = prev;
         next_ = next;
-        same_key_values_ = new std::vector<ValueType>();
         // push the first value into the same_key_values_ as well
         // TODO: either having a better way to manage the repeated key and value or get rid of value_ field
-        same_key_values_->push_back(val);
+        same_key_values_.push_back(val);
       }
       // copy constructor to construct a InnerList from reference
       InnerList(InnerList *reference) {
@@ -35,20 +34,19 @@ class BPlusTree {
         value_ = reference->value_;
         prev_ = reference->prev_;
         next_ = reference->next_;
-        same_key_values_ = new std::vector<ValueType>();
-        same_key_values_->insert(reference->same_key_values_->begin(), reference->same_key_values_->end());
+        same_key_values_.insert(reference->same_key_values_.begin(), reference->same_key_values_.end());
       }
       ~InnerList() {
         InnerList *next;
         // TODO: Do we need to delete every element in the same key value?
-        delete same_key_values_;
+        // delete same_key_values_;
         // TODO: do we need to delete the key and value?
         /*
         delete key_;
         delete value_;
         */
       }
-      std::vector<ValueType> GetAllValues() { return *same_key_values_; }
+      std::vector<ValueType> GetAllValues() { return same_key_values_; }
 
       // insert at the fron of the current value node
       void InsertFront(InnerList *new_value) {
@@ -82,7 +80,7 @@ class BPlusTree {
                        "insertDup do not accept null InnerList to be inserted");
         TERRIER_ASSERT(new_value->key_ == this->key_,
                        "insertDup should insert at Innerlist with same key as the new_value");
-        this->same_key_values_.push_back(*(new_value->value_));
+        same_key_values_.push_back((new_value->value_));
         // void the value_field to prevent deletion
         new_value->value_ = nullptr;
         delete new_value;
@@ -104,7 +102,7 @@ class BPlusTree {
     };  // end class InnerList
     size_t size;
     InnerList *value_list_;              // list of value points, point at the start
-    std::vector<TreeNode *> *ptr_list_;  // list of pointers to the next treeNode, left node have size zero
+    std::vector<TreeNode *> ptr_list_;  // list of pointers to the next treeNode, left node have size zero
     TreeNode *parent_;
     TreeNode *left_sibling_;
     TreeNode *right_sibling_;  // only leaf node has siblings
@@ -120,9 +118,6 @@ class BPlusTree {
         size++;
         value_list = value_list->next_;
       }
-      if (ptr_list_ == nullptr) {
-        ptr_list_ = new std::vector<InnerList *>();
-      }
     }
     ~TreeNode() {
       InnerList *tmp_list;
@@ -131,10 +126,9 @@ class BPlusTree {
         value_list_ = value_list_->next_;
         delete tmp_list;
       }
-      for (int i = 0; i < ptr_list_->size(); i++) {
-        delete (*ptr_list_)[i];
+      for (int i = 0; i < ptr_list_.size(); i++) {
+        delete ptr_list_[i];
       }
-      delete ptr_list_;
     }
 
     typedef struct SplitReturn {
@@ -144,7 +138,7 @@ class BPlusTree {
       TreeNode *right_child;
     } SplitReturn;
 
-    bool IsLeaf() { return ptr_list_->size() == 0; }
+    bool IsLeaf() { return ptr_list_.size() == 0; }
     bool ShouldSplit(size_t order) { return size > order; }
     /**
      * Recursively find the position to perform insert.
@@ -264,7 +258,7 @@ class BPlusTree {
     }
     bool ContainDupValue(ValueType value) {
       for (int i = 0; i < this->same_key_values_.size(); i++) {
-        if ((*(this->same_key_values_))[i] == value) return true;
+        if ((this->same_key_values_)[i] == value) return true;
       }
       return false;
     }
@@ -275,7 +269,7 @@ class BPlusTree {
       TERRIER_ASSERT(!this->IsLeaf(), "findBestFitChild should be called from non-leaf node");
       InnerList *cur_val = value_list_;
       InnerList *next_val;
-      auto ptr_iter = ptr_list_->begin();  // left side of the ptr list
+      auto ptr_iter = ptr_list_.begin();  // left side of the ptr list
       while (cur_val != nullptr) {
         if (cur_val->key_ > key) {
           return *ptr_iter;
@@ -310,10 +304,10 @@ class BPlusTree {
       // delete the right node from ptr list if there is any
       if (!this->IsLeaf()) {
         TERRIER_ASSERT(this->ptr_list != nullptr, "When it is no leaf ptr_list should not be null");
-        auto ptr_iter = this->ptr_list_->begin();
-        while (ptr_iter != this->ptr_list_->end()) {
+        auto ptr_iter = this->ptr_list_.begin();
+        while (ptr_iter != this->ptr_list_.end()) {
           if (*ptr_iter == right_node) {
-            this->ptr_list_->erase(ptr_iter);
+            this->ptr_list_.erase(ptr_iter);
             break;
           }
           ++ptr_iter;
@@ -353,8 +347,8 @@ class BPlusTree {
 
       // if non-leaf, merge the ptr list
       if (!left_node->IsLeaf()) {
-        left_node->ptr_list_->insert(left_node->ptr_list_->end(), right_node->ptr_list_->begin(),
-                                     right_node->ptr_list_->end());
+        left_node->ptr_list_.insert(left_node->ptr_list_.end(), right_node->ptr_list_.begin(),
+                                     right_node->ptr_list_.end());
         // TODO: not sure should invalidate the right ptr list in order to prevent its inner element currently in left
         // gets invalidated
       }
@@ -377,7 +371,7 @@ class BPlusTree {
       else {
         // find a position to insert value into
         InnerList *cur_value = value_list_;
-        auto ptr_list_iter = this->ptr_list_->begin(); // left side of the value
+        auto ptr_list_iter = this->ptr_list_.begin(); // left side of the value
         // lterate untill theoriginal ptr position using left node as original node
         while ((*ptr_list_iter) != left_child) {
           cur_value = cur_value->next_;
@@ -416,7 +410,7 @@ class BPlusTree {
     // split the current node into two for left and non-leaf
     SplitReturn *SplitNode(TreeNode *node) {
       SplitReturn result;
-      size_t split_index = size / 2;
+      size_t split_index = node->size / 2;
       size_t cur_index = 0;
       InnerList split_list = value_list_;
       // get the split_list location
@@ -461,9 +455,9 @@ class BPlusTree {
         size_t popping_index = left_tree_node->size;  // ptr lise has size + 1 ptrs
         InnerList *tmp_ptr;
         while (popping_index > cur_index) {
-          tmp_ptr =left_tree_node->ptr_list_->back();
-          left_tree_node->ptr_list_->pop_back();
-          right_tree_node->ptr_list_->insert(right_tree_node->ptr_list_->begin(), tmp_ptr);
+          tmp_ptr = left_tree_node->ptr_list_.back();
+          left_tree_node->ptr_list_.pop_back();
+          right_tree_node->ptr_list_.insert(right_tree_node->ptr_list_.begin(), tmp_ptr);
           popping_index--;
         }
         // configure size

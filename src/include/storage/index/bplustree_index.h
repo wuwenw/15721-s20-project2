@@ -161,7 +161,7 @@ class BPlusTreeIndex final : public Index {
     if (high_key_exists) index_high_key.SetFromProjectedRow(*high_key, metadata_, num_attrs);
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-        std::vector<TupleSlot> results;
+    std::vector<TupleSlot> results;
     bplustree_->GetValueDescending(index_low_key, index_high_key, results);
     value_list->reserve(results.size());
     for (auto i = results.rbegin(); i != results.rend(); ++i) {
