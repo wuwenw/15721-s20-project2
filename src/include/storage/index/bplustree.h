@@ -11,6 +11,7 @@ class BPlusTree {
 
   class TreeNode {
    public:
+
     class InnerList {
      public:
       KeyType key_;
