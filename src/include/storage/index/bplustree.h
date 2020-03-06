@@ -377,8 +377,8 @@ class BPlusTree {
         InnerList *cur_value = value_list_;
         auto ptr_list_iter = this->ptr_list_->begin();
         // lterate untill theoriginal ptr position using left node as original node
-        while ((*ptr_list_iter) != left_node) {
-          next_value = cur_value->next_;
+        while ((*ptr_list_iter) != left_child) {
+          cur_value = cur_value->next_;
           ++ptr_list_iter;
         }
         // insert right ptr at the right of current left ptr
