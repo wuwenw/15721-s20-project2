@@ -131,7 +131,7 @@ class BPlusTreeIndex final : public Index {
 
     // Perform lookup in BPlusTree
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-
+    bplustree_->GetValue(index_key, results);
     // Avoid resizing our value_list, even if it means over-provisioning
     value_list->reserve(results.size());
 
@@ -161,6 +161,12 @@ class BPlusTreeIndex final : public Index {
     if (high_key_exists) index_high_key.SetFromProjectedRow(*high_key, metadata_, num_attrs);
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
+        std::vector<TupleSlot> results;
+    bplustree_->GetValueDescending(index_low_key, index_high_key, results);
+    value_list->reserve(results.size());
+    for (auto i = results.rbegin(); i != results.rend(); ++i) {
+      if (IsVisible(txn, *i)) value_list->emplace_back(*i);
+    }
   }
 
   void ScanDescending(const transaction::TransactionContext &txn, const ProjectedRow &low_key,
@@ -173,6 +179,12 @@ class BPlusTreeIndex final : public Index {
     index_high_key.SetFromProjectedRow(high_key, metadata_, metadata_.GetSchema().GetColumns().size());
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
+    std::vector<TupleSlot> results;
+    bplustree_->GetValueDescending(index_low_key, index_high_key, results);
+    value_list->reserve(results.size());
+    for (const auto &result : results) {
+      if (IsVisible(txn, result)) value_list->emplace_back(result);
+    }
   }
 
   void ScanLimitDescending(const transaction::TransactionContext &txn, const ProjectedRow &low_key,
@@ -187,6 +199,13 @@ class BPlusTreeIndex final : public Index {
     index_high_key.SetFromProjectedRow(high_key, metadata_, metadata_.GetSchema().GetColumns().size());
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
+        std::vector<TupleSlot> results;
+    bplustree_->GetValueDescendingLimited(index_low_key, index_high_key, results, limit);
+    value_list->reserve(results.size());
+    for (const auto &result : results) {
+      if (IsVisible(txn, result)) value_list->emplace_back(result);
+    }
+  }
   }
 };
 
