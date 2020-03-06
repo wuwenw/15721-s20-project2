@@ -199,7 +199,7 @@ class BPlusTreeIndex final : public Index {
     index_high_key.SetFromProjectedRow(high_key, metadata_, metadata_.GetSchema().GetColumns().size());
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-    std::vector<TupleSlot> results;
+        std::vector<TupleSlot> results;
     bplustree_->GetValueDescendingLimited(index_low_key, index_high_key, results, limit);
     value_list->reserve(results.size());
     for (const auto &result : results) {
