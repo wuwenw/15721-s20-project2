@@ -596,6 +596,34 @@ class BPlusTree {
     }
   }
 
+
+    size_t GetHeapUsage() const final {
+        size_t total_usage = 0;
+        if (root == nullptr)
+            return 0;
+        queue<TreeNode *> q;
+        q.push(root);
+        while (!q.empty())
+        {
+            TreeNode *curr= q.pop();
+            total_usage += GetNodeUsage(curr);
+
+            for (int i = 0; i < curr->ptr_list.size(); i++)
+                q.push(curr->ptr_list[i]);
+        }
+        return total_usage;
+    }
+
+    size_t GetHeapUsage(TreeNode * node) const final {
+        size_t count = 0;
+        if (node == nullptr) {
+            return 0;
+        }
+        // count heap usage for current node
+
+        return count;
+  }
+
  private:
   mutable common::SpinLatch latch_;
   TreeNode *RebalanceTree(TreeNode *leaf_node) {
