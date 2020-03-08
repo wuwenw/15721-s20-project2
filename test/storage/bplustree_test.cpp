@@ -168,7 +168,7 @@ TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
   for (int64_t i = 0; i < key_num; i++) { 
     tree->Insert(keys[i], keys[i]);
   }
-  std::cerr << "================= finish insert ==============\n"
+  std::cerr << "================= finish insert ==============\n";
   for (int64_t i = 0; i < key_num; i++) {
     EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
   }  
