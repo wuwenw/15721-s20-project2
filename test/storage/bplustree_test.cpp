@@ -304,6 +304,11 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->value_list_->next_->key_, 11);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[2]->value_list_->key_, 12);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[2]->value_list_->next_->key_, 16);
+
+  for (int64_t i = 18; i < 65; i++) {
+    tree->Insert(i, i);
+  }
+  PrintTree(tree);
   delete tree;
 }
 }  // namespace terrier::storage::index
