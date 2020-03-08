@@ -17,7 +17,6 @@ struct BPlusTreeTests : public TerrierTest {
 
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, EmptyTest) { EXPECT_TRUE(true); }
-}  // namespace terrier::storage::index
 
 TEST_F(BPlusTreeTests, NaiveSequentialInsert) {
   // This defines the key space (0 ~ (1M - 1))
@@ -65,8 +64,8 @@ TEST_F(BPlusTreeTests, NaiveSequentialInsert) {
   EXPECT_EQ(tree->root->ptr_list_[0]->ptr_list_[1]->value_list_->key_, 2);
   EXPECT_EQ(tree->root->ptr_list_[0]->ptr_list_[1]->IsLeaf(), true);
 
-  EXPECT_EQ(tree->root->ptr_list_[0]->ptr_list_[0].size, 1);
-  EXPECT_EQ(tree->root->ptr_list_[0]->ptr_list_[1].size, 1);
+  EXPECT_EQ(tree->root->ptr_list_[0]->ptr_list_[0]->size, 1);
+  EXPECT_EQ(tree->root->ptr_list_[0]->ptr_list_[1]->size, 1);
 
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[0]->value_list_->key_, 4);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[0]->IsLeaf(), true);
@@ -74,8 +73,8 @@ TEST_F(BPlusTreeTests, NaiveSequentialInsert) {
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->value_list_->next_->key_, 7);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->IsLeaf(), true);
 
-  EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[0].size, 1);
-  EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[0].size, 2);
+  EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[0]->size, 1);
+  EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[0]->size, 2);
 
   // assert leaf linked properly
   EXPECT_EQ(tree->root->ptr_list_[0]->ptr_list_[0]->value_list_->key_, 0);
@@ -90,3 +89,4 @@ TEST_F(BPlusTreeTests, NaiveSequentialInsert) {
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->left_sibling_->left_sibling_->left_sibling_->value_list_->key_, 0);
   delete tree;
 }
+}  // namespace terrier::storage::index
