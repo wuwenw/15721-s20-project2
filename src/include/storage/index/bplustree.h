@@ -33,10 +33,9 @@ class BPlusTree {
         value_ = reference->value_;
         prev_ = reference->prev_;
         next_ = reference->next_;
-        same_key_values_.insert(reference->same_key_values_.begin(), reference->same_key_values_.end());
+        same_key_values_.insert(same_key_values_.end(), reference->same_key_values_.begin(), reference->same_key_values_.end());
       }
       ~InnerList() {
-        InnerList *next;
         // TODO: Do we need to delete every element in the same key value?
         // delete same_key_values_;
         // TODO: do we need to delete the key and value?
@@ -118,11 +117,11 @@ class BPlusTree {
     ~TreeNode() {
       InnerList *tmp_list;
       while (value_list_ != nullptr) {
-        tmp_list = *value_list_;
+        tmp_list = value_list_;
         value_list_ = value_list_->next_;
         delete tmp_list;
       }
-      for (int i = 0; i < ptr_list_.size(); i++) {
+      for (size_t i = 0; i < ptr_list_.size(); i++) {
         delete ptr_list_[i];
       }
     }
@@ -143,12 +142,13 @@ class BPlusTree {
      **/
     TreeNode *Insert(KeyType key, ValueType val, bool allow_dup = true) {
       TreeNode *result = nullptr;
-      InnerList *new_value = new InnerList(key, val);
+
       if (IsLeaf()) {
+        InnerList *new_value = new InnerList(key, val);
         result = insertAtLeafNode(new_value, allow_dup);
       } else {
-        TreeNode *child_node = findBestFitChild(new_value->key_);
-        result = child_node->Insert(new_value, allow_dup);
+        TreeNode *child_node = findBestFitChild(key);
+        result = child_node->Insert(key, val, allow_dup);
       }
       return result;
     }
@@ -189,13 +189,13 @@ class BPlusTree {
         return root_node;
       }
       // otherwise split the current node
-      SplitReturn *split_res = SplitNode(cur_node);
+      SplitReturn split_res = SplitNode(cur_node);
       // fail to split into two nodes
-      if (split_res == nullptr) {
-        return this->RestoreTreeFromNode(left_child, right_child, restore_stack);
-      }
-      return Split(split_res->parent, root_node, order, restore_stack, split_res->split_value, split_res->left_child,
-                   split_res->right_child);
+//      if (split_res == nullptr) {
+//        return this->RestoreTreeFromNode(left_child, right_child, restore_stack);
+//      }
+      return Split(split_res.parent, root_node, order, restore_stack, split_res.split_value, split_res.left_child,
+                   split_res.right_child);
     }
 
     TreeNode *GetNodeRecursive(TreeNode *node, KeyType index_key) {
@@ -203,7 +203,7 @@ class BPlusTree {
         return node;
       } else {
         TreeNode *child_node = findBestFitChild(index_key);
-        GetNodeRecursive(child_node, index_key);
+        return GetNodeRecursive(child_node, index_key);
       }
     }
 
@@ -287,59 +287,60 @@ class BPlusTree {
         else
           cur_val = next_val;
       }
+      return *ptr_iter;
     }
     // return the top node and recursively restore child according to restoring stack
-    TreeNode *RestoreTreeFromNode(TreeNode *left_node, TreeNode *right_node, std::vector<InnerList *> restore_stack) {
-      // pop the restoring value
-      InnerList *split_list = restore_stack.pop_back();
-
-      // delete the split value in current node if there is any
-      InnerList *cur_val = this->value_list_;
-      while (cur_val != nullptr) {
-        if (cur_val->key_ == split_list->key_) {
-          TERRIER_ASSERT(cur_val == split_list,
-                         "the value targeting to be removed should be the same as the one in the restore stack");
-          cur_val->PopListHere();
-          break;
-        }
-        cur_val = cur_val->next_;
-      }
-      // if not leaf node
-      // delete the right node from ptr list if there is any
-      if (!this->IsLeaf()) {
-        TERRIER_ASSERT(this->ptr_list != nullptr, "When it is no leaf ptr_list should not be null");
-        auto ptr_iter = this->ptr_list_.begin();
-        while (ptr_iter != this->ptr_list_.end()) {
-          if (*ptr_iter == right_node) {
-            this->ptr_list_.erase(ptr_iter);
-            break;
-          }
-          ++ptr_iter;
-        }
-      }
-
-      // merge left node with right node:
-      merge(left_node, right_node);
-      // merge values together
-      // if not leaf node, merge ptr list
-
-      // recursively call left child to restore
-      TreeNode child_left = nullptr;
-      TreeNode child_right = nullptr;
-      int index = 0;
-      if (!left_node->IsLeaf()) {
-        InnerList *child_split_list = restore_stack.back();
-        while (left_node->value_list_[index]->key_ != child_split_list->key_) {
-          index++;
-        }
-        child_left = left_node->ptr_list_[index];
-        child_right = left_node->ptr_list_[index + 1];
-      }
-      left_node->RestoreTreeFromNode(child_left, child_right, restore_stack);
-      // return restored top node which is this
-      return this;
-      ;
-    }
+//    TreeNode *RestoreTreeFromNode(TreeNode *left_node, TreeNode *right_node, std::vector<InnerList *> restore_stack) {
+//      // pop the restoring value
+//      InnerList *split_list = restore_stack.pop_back();
+//
+//      // delete the split value in current node if there is any
+//      InnerList *cur_val = this->value_list_;
+//      while (cur_val != nullptr) {
+//        if (cur_val->key_ == split_list->key_) {
+//          TERRIER_ASSERT(cur_val == split_list,
+//                         "the value targeting to be removed should be the same as the one in the restore stack");
+//          cur_val->PopListHere();
+//          break;
+//        }
+//        cur_val = cur_val->next_;
+//      }
+//      // if not leaf node
+//      // delete the right node from ptr list if there is any
+//      if (!this->IsLeaf()) {
+//        TERRIER_ASSERT(this->ptr_list != nullptr, "When it is no leaf ptr_list should not be null");
+//        auto ptr_iter = this->ptr_list_.begin();
+//        while (ptr_iter != this->ptr_list_.end()) {
+//          if (*ptr_iter == right_node) {
+//            this->ptr_list_.erase(ptr_iter);
+//            break;
+//          }
+//          ++ptr_iter;
+//        }
+//      }
+//
+//      // merge left node with right node:
+//      merge(left_node, right_node);
+//      // merge values together
+//      // if not leaf node, merge ptr list
+//
+//      // recursively call left child to restore
+//      TreeNode child_left = nullptr;
+//      TreeNode child_right = nullptr;
+//      int index = 0;
+//      if (!left_node->IsLeaf()) {
+//        InnerList *child_split_list = restore_stack.back();
+//        while (left_node->value_list_[index]->key_ != child_split_list->key_) {
+//          index++;
+//        }
+//        child_left = left_node->ptr_list_[index];
+//        child_right = left_node->ptr_list_[index + 1];
+//      }
+//      left_node->RestoreTreeFromNode(child_left, child_right, restore_stack);
+//      // return restored top node which is this
+//      return this;
+//      ;
+//    }
     // merge right into left, delete right treenode
     void merge(TreeNode *left_node, TreeNode *right_node) {
       TERRIER_ASSERT(left_node->IsLeaf() == right_node->IsLeaf(),
@@ -412,11 +413,11 @@ class BPlusTree {
 
     // assume the node exceeds capacity
     // split the current node into two for left and non-leaf
-    SplitReturn *SplitNode(TreeNode *node) {
+    SplitReturn SplitNode(TreeNode *node) {
       SplitReturn result;
       size_t split_index = node->size / 2;
       size_t cur_index = 0;
-      InnerList split_list = value_list_;
+      InnerList *split_list = value_list_;
       // get the split_list location
       while (cur_index != split_index) {
         split_list = split_list->next_;
@@ -424,7 +425,7 @@ class BPlusTree {
       }
       // create a new TreeNode that has the same parent
       TreeNode *right_tree_node = new TreeNode(node->parent_);
-      TreeNode left_tree_node = node;
+      TreeNode *left_tree_node = node;
       // if (right_tree_node == nullptr) return nullptr;
       result.parent = left_tree_node->parent_;
       result.left_child = left_tree_node;
@@ -457,7 +458,7 @@ class BPlusTree {
         // cur_index is the left ptr in the poped node
         // should remain at the left side, right node keeps everything from cur_index + 1
         size_t popping_index = left_tree_node->size;  // ptr lise has size + 1 ptrs
-        InnerList *tmp_ptr;
+        TreeNode *tmp_ptr;
         while (popping_index > cur_index) {
           tmp_ptr = left_tree_node->ptr_list_.back();
           left_tree_node->ptr_list_.pop_back();
@@ -469,7 +470,7 @@ class BPlusTree {
         left_tree_node->size = cur_index;
         result.split_value = split_list;
       }
-      return &result;
+      return result;
     }
   };  // end TreeNode
 
@@ -483,22 +484,21 @@ class BPlusTree {
   ~BPlusTree() { delete root; }
 
   bool Insert(KeyType key, ValueType value, bool allow_dup = true) {
-    common::SpinLatch::ScopedSpinLatch guard(latch_);
-    bool result = false;
+    common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *new_root = nullptr;
-    root->Insert(key, value, allow_dup);
-    new_root = RebalanceTree(result, key, value);
+    TreeNode *leaf_node = root->Insert(key, value, allow_dup);
+    new_root = RebalanceTree(leaf_node);
     if (new_root == nullptr) return false;
     root = new_root;
     return true;
   }
   bool InsertUnique(KeyType key, ValueType value) { return Insert(key, value, false); }
   bool Delete(KeyType key, ValueType value) {
-    common::SpinLatch::ScopedSpinLatch guard(latch_);
+    common::SpinLatch::ScopedSpinLatch guard(&latch_);
     return true;
   }
   void GetValue(KeyType index_key, std::vector<ValueType> &results) {
-    TreeNode *target_node = GetNodeRecursive(root, index_key);
+    TreeNode *target_node = root->GetNodeRecursive(root, index_key);
     auto *cur = target_node->value_list_;
     while (cur != nullptr) {
       if (index_key == cur->key_) {
@@ -510,7 +510,7 @@ class BPlusTree {
   }
 
   void GetValueDescending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> &results) {
-    TreeNode *cur_node = GetNodeRecursive(root, index_high_key);
+    TreeNode *cur_node = root->GetNodeRecursive(root, index_high_key);
     while (cur_node != nullptr) {
       auto cur = cur_node->value_list_;
       while (cur != nullptr) {
@@ -529,7 +529,7 @@ class BPlusTree {
                                  uint32_t limit) {
     if (limit == 0) return;
     uint32_t count = 0;
-    TreeNode *cur_node = GetNodeRecursive(root, index_high_key);
+    TreeNode *cur_node = root->GetNodeRecursive(root, index_high_key);
     while (cur_node != nullptr) {
       auto cur = cur_node->value_list_;
       while (cur != nullptr) {
@@ -551,7 +551,7 @@ class BPlusTree {
   TreeNode *RebalanceTree(TreeNode *leaf_node) {
     // wrapper for recursively rebalance the tree
     // if size exceeds, pop the middle element going from child to parent
-    return SplitWrapper(leaf_node, root, order_);
+    return root->SplitWrapper(leaf_node, root, order_);
   }
 };
 }  // namespace terrier::storage::index
