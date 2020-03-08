@@ -10,7 +10,6 @@ class BPlusTree {
  public:
   class BaseOp {
    public:
-    BaseOp(){}
     // Key comparator
     const KeyComparator key_cmp_obj;
     // Raw key eq checker
@@ -140,7 +139,6 @@ class BPlusTree {
         value_list = value_list->next_;
       }
     }
-    TreeNode() {}
     ~TreeNode() {
       InnerList *tmp_list;
       while (value_list_ != nullptr) {
