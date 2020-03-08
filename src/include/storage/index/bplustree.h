@@ -233,12 +233,12 @@ class BPlusTree {
                    split_res.right_child, split_res.parent_index);
     }
 
-    TreeNode *GetNodeRecursive(TreeNode *node, KeyType index_key) {
+    TreeNode *GetNodeRecursive(TreeNode * node, KeyType index_key) {
       if (IsLeaf()) {
         return node;
       } else {
         TreeNode *child_node = findBestFitChild(index_key);
-        return GetNodeRecursive(child_node, index_key);
+        return child_node->GetNodeRecursive(child_node, index_key);
       }
     }
 
