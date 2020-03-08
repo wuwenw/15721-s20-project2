@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <utility>
@@ -206,8 +207,7 @@ class BPlusTreeIndex final : public Index {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
     }
   }
-  }
-};
+  };
 
 extern template class BPlusTreeIndex<CompactIntsKey<8>>;
 extern template class BPlusTreeIndex<CompactIntsKey<16>>;
