@@ -557,6 +557,7 @@ class BPlusTree {
   }
   void GetValue(KeyType index_key, std::vector<ValueType> &results) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
+    std::cerr << "============= begin reading =============\n";
     TreeNode *target_node = root->GetNodeRecursive(root, index_key);
     auto *cur = target_node->value_list_;
     while (cur != nullptr) {
