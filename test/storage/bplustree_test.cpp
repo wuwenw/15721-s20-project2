@@ -305,10 +305,114 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[2]->value_list_->key_, 12);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[2]->value_list_->next_->key_, 16);
 
-  for (int64_t i = 18; i < 65; i++) {
-    tree->Insert(i, i);
+  for (int64_t i = 18; i < 100000; i++) {
+    tree->InsertUnique(i, i);
   }
-  PrintTree(tree);
+  // PrintTree(tree);
   delete tree;
 }
+TEST_F(BPlusTreeTests, ManyInsert) {
+  // This defines the key space (0 ~ (1M - 1))
+  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+      new terrier::storage::index::BPlusTree<int64_t, int64_t>(8);
+
+  for (int64_t i = 18; i < 100000; i++) {
+    tree->InsertUnique(i, i);
+  }
+  // PrintTree(tree);
+  delete tree;
+}
+
+TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
+  const uint32_t key_num = 8;
+  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+
+  std::vector<int64_t> keys;
+  std::vector<int64_t> results;
+  keys.reserve(key_num);
+  std::cerr << "================= begin insert ==============\n";
+  for (int64_t i = 0; i < key_num; i++) {
+    keys.emplace_back(i);
+    tree->Insert(keys[i], keys[i]);
+  }
+  std::cerr << "================= finish insert ==============\n";
+  for (int64_t i = 0; i < key_num; i++) {
+    tree->GetValue(keys[i], results);
+    EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
+  }  
+
+  delete tree;
+}
+
+TEST_F(BPlusTreeTests, SequentialScanTest) {
+  const uint32_t key_num = 1024*1024;
+  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+
+  std::vector<int64_t> keys;
+  std::vector<int64_t> results;
+  keys.reserve(key_num);
+  std::cerr << "================= begin insert ==============\n";
+  for (int64_t i = 0; i < key_num; i++) {
+    keys.emplace_back(i);
+    tree->Insert(keys[i], keys[i]);
+  }
+  std::cerr << "================= finish insert ==============\n";
+  for (int64_t i = 0; i < key_num; i++) {
+    tree->GetValue(keys[i], results);
+    EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
+}
+  delete tree;
+}
+
+TEST_F(BPlusTreeTests, NaiveDuplicateScanTest) {
+  const uint32_t key_num = 2;
+  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+
+  std::vector<int64_t> keys;
+  std::vector<int64_t> results;
+  keys.reserve(key_num);
+
+  for (int64_t i = 0; i < key_num; i++) {
+    keys.emplace_back(i);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+  }
+  std::cerr << "================= finish insert ==============\n";
+  for (int64_t i = 0; i < key_num; i++) {
+    tree->GetValue(keys[i], results);
+    EXPECT_EQ(results, std::vector<int64_t>(3, keys[i]));
+  }
+
+  delete tree;
+}
+
+TEST_F(BPlusTreeTests, DuplicateScanTest) {
+  const uint32_t key_num = 1024*1024;
+  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+
+  std::vector<int64_t> keys;
+  std::vector<int64_t> results;
+  keys.reserve(key_num);
+
+  for (int64_t i = 0; i < key_num; i++) {
+    keys.emplace_back(i);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+  }
+  std::cerr << "================= finish insert ==============\n";
+  for (int64_t i = 0; i < key_num; i++) {
+    tree->GetValue(keys[i], results);
+    EXPECT_EQ(results, std::vector<int64_t>(5, keys[i]));
+  }
+
+  delete tree;
+  }
 }  // namespace terrier::storage::index
