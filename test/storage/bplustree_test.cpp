@@ -153,7 +153,7 @@ TEST_F(BPlusTreeTests, NaiveSequentialInsert) {
 }
 
 TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
-  const uint32_t key_num = 8;
+  const uint32_t key_num = 2;
   terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
       new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
