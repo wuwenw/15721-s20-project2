@@ -313,7 +313,7 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
 }
 
 TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
-  const uint32_t key_num = 4;
+  const uint32_t key_num = 8;
   terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
       new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
@@ -323,9 +323,6 @@ TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
   std::cerr << "================= begin insert ==============\n";
   for (int64_t i = 0; i < key_num; i++) {
     keys.emplace_back(i);
-  }
-
-  for (int64_t i = 0; i < key_num; i++) { 
     tree->Insert(keys[i], keys[i]);
   }
   std::cerr << "================= finish insert ==============\n";
@@ -334,6 +331,27 @@ TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
     EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
   }  
 
+  delete tree;
+}
+
+TEST_F(BPlusTreeTests, SequentialScanTest) {
+  const uint32_t key_num = 1024*1024;
+  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+
+  std::vector<int64_t> keys;
+  std::vector<int64_t> results;
+  keys.reserve(key_num);
+  std::cerr << "================= begin insert ==============\n";
+  for (int64_t i = 0; i < key_num; i++) {
+    keys.emplace_back(i);
+    tree->Insert(keys[i], keys[i]);
+  }
+  std::cerr << "================= finish insert ==============\n";
+  for (int64_t i = 0; i < key_num; i++) {
+    tree->GetValue(keys[i], results);
+    EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
+}
   delete tree;
 }
 
@@ -351,7 +369,6 @@ TEST_F(BPlusTreeTests, NaiveDuplicateScanTest) {
     tree->Insert(keys[i], keys[i]);
     tree->Insert(keys[i], keys[i]);
     tree->Insert(keys[i], keys[i]);
-    tree->GetValue(keys[i], results);
   }
   std::cerr << "================= finish insert ==============\n";
   for (int64_t i = 0; i < key_num; i++) {
@@ -361,6 +378,32 @@ TEST_F(BPlusTreeTests, NaiveDuplicateScanTest) {
 
   delete tree;
 }
+
+TEST_F(BPlusTreeTests, DuplicateScanTest) {
+  const uint32_t key_num = 1024*1024;
+  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+
+  std::vector<int64_t> keys;
+  std::vector<int64_t> results;
+  keys.reserve(key_num);
+
+  for (int64_t i = 0; i < key_num; i++) {
+    keys.emplace_back(i);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+  }
+  std::cerr << "================= finish insert ==============\n";
+  for (int64_t i = 0; i < key_num; i++) {
+    tree->GetValue(keys[i], results);
+    EXPECT_EQ(results, std::vector<int64_t>(3, keys[i]));
+  }
+
+  delete tree;
+  }
 
 
 }  // namespace terrier::storage::index
