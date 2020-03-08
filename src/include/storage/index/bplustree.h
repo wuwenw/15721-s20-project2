@@ -102,7 +102,7 @@ class BPlusTree {
     TreeNode *parent_;
     TreeNode *left_sibling_;
     TreeNode *right_sibling_;  // only leaf node has siblings
-    TreeNode(TreeNode *parent, InnerList *value_list = nullptr, std::vector<TreeNode *> ptr_list = nullptr,
+    TreeNode(TreeNode *parent, InnerList *value_list = nullptr, std::vector<TreeNode *> ptr_list = std::vector<TreeNode *>(),
              TreeNode *left_sibling = nullptr, TreeNode *right_sibling = nullptr) {
       value_list_ = value_list;
       ptr_list_ = ptr_list;
@@ -208,15 +208,6 @@ class BPlusTree {
       }
     }
 
-    TreeNode *GetNodeRecursive(TreeNode *node, KeyType index_key) {
-      if (IsLeaf()) {
-        return node;
-      } else {
-        TreeNode *child_node = findBestFitChild(index_key);
-        GetNodeRecursive(child_node, index_key);
-      }
-    }
-
    private:
     InnerList *GetEndValue() {
       InnerList *cur = value_list_;
@@ -228,8 +219,12 @@ class BPlusTree {
       return cur;
     }
     // assuming this is a leafNode
+    template <typename KeyType, typename ValueType, typename KeyComparator = std::less<KeyType>,
+        typename KeyEqualityChecker = std::equal_to<KeyType>, typename KeyHashFunc = std::hash<KeyType>,
+        typename ValueEqualityChecker = std::equal_to<ValueType>>
     TreeNode *insertAtLeafNode(InnerList *new_list, bool allow_dup = true) {
       TERRIER_ASSERT(this->IsLeaf(), "insertAtLeafNode should be called from leaf node");
+      KeyEqualityChecker
       KeyType key = new_list->key_;
       ValueType val = new_list->value_;
       InnerList *cur = value_list_;
