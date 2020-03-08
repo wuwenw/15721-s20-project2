@@ -8,7 +8,6 @@ template <typename KeyType, typename ValueType, typename KeyComparator = std::le
           typename ValueEqualityChecker = std::equal_to<ValueType>>
 class BPlusTree {
  public:
-
   class TreeNode {
    public:
     class InnerList {
@@ -50,8 +49,7 @@ class BPlusTree {
 
       // insert at the fron of the current value node
       void InsertFront(InnerList *new_value) {
-        TERRIER_ASSERT(new_value != nullptr,
-                       "insertFront do not accept null InnerList to be inserted");
+        TERRIER_ASSERT(new_value != nullptr, "insertFront do not accept null InnerList to be inserted");
         InnerList *cur_value = this;
         InnerList *prev = cur_value->prev_;
         if (prev != nullptr) {
@@ -63,8 +61,7 @@ class BPlusTree {
       }
 
       void InsertBack(InnerList *new_value) {
-        TERRIER_ASSERT(new_value != nullptr,
-                       "insertBack do not accept null InnerList to be inserted");
+        TERRIER_ASSERT(new_value != nullptr, "insertBack do not accept null InnerList to be inserted");
         InnerList *cur_value = this;
         InnerList *next = cur_value->next_;
         if (next != nullptr) {
@@ -76,8 +73,7 @@ class BPlusTree {
       }
 
       void InsertDup(InnerList *new_value) {
-        TERRIER_ASSERT(new_value != nullptr,
-                       "insertDup do not accept null InnerList to be inserted");
+        TERRIER_ASSERT(new_value != nullptr, "insertDup do not accept null InnerList to be inserted");
         TERRIER_ASSERT(new_value->key_ == this->key_,
                        "insertDup should insert at Innerlist with same key as the new_value");
         same_key_values_.push_back((new_value->value_));
@@ -101,7 +97,7 @@ class BPlusTree {
       }
     };  // end class InnerList
     size_t size;
-    InnerList *value_list_;              // list of value points, point at the start
+    InnerList *value_list_;             // list of value points, point at the start
     std::vector<TreeNode *> ptr_list_;  // list of pointers to the next treeNode, left node have size zero
     TreeNode *parent_;
     TreeNode *left_sibling_;
@@ -174,9 +170,9 @@ class BPlusTree {
       if (cur_node == nullptr) {
         TreeNode *new_root = new TreeNode(nullptr);
         // if the creation fails
-//        if (new_root == nullptr) {
-//          return this->RestoreTreeFromNode(left_child, right_child, restore_stack);
-//        }
+        //        if (new_root == nullptr) {
+        //          return this->RestoreTreeFromNode(left_child, right_child, restore_stack);
+        //        }
         new_root->ConfigureNewSplitNode(split_value_list, left_child, right_child);
         return new_root;
       }
@@ -202,6 +198,15 @@ class BPlusTree {
                    split_res->right_child);
     }
 
+    TreeNode *GetNodeRecursive(TreeNode *node, KeyType index_key) {
+      if (IsLeaf()) {
+        return node;
+      } else {
+        TreeNode *child_node = findBestFitChild(index_key);
+        GetNodeRecursive(child_node, index_key);
+      }
+    }
+
    private:
     InnerList *GetEndValue() {
       InnerList *cur = value_list_;
@@ -214,8 +219,7 @@ class BPlusTree {
     }
     // assuming this is a leafNode
     TreeNode *insertAtLeafNode(InnerList *new_list, bool allow_dup = true) {
-      TERRIER_ASSERT(this->IsLeaf(),
-                     "insertAtLeafNode should be called from leaf node");
+      TERRIER_ASSERT(this->IsLeaf(), "insertAtLeafNode should be called from leaf node");
       KeyType key = new_list->key_;
       ValueType val = new_list->value_;
       InnerList *cur = value_list_;
@@ -235,7 +239,7 @@ class BPlusTree {
           if (next != nullptr && next->key_ <= key) {
             cur = cur->next_;
             continue;
-          }else {
+          } else {
             // if should insert at the front
             if (cur->key_ > key) {
               cur->InsertFront(new_list);
@@ -348,7 +352,7 @@ class BPlusTree {
       // if non-leaf, merge the ptr list
       if (!left_node->IsLeaf()) {
         left_node->ptr_list_.insert(left_node->ptr_list_.end(), right_node->ptr_list_.begin(),
-                                     right_node->ptr_list_.end());
+                                    right_node->ptr_list_.end());
         // TODO: not sure should invalidate the right ptr list in order to prevent its inner element currently in left
         // gets invalidated
       }
@@ -371,7 +375,7 @@ class BPlusTree {
       else {
         // find a position to insert value into
         InnerList *cur_value = value_list_;
-        auto ptr_list_iter = this->ptr_list_.begin(); // left side of the value
+        auto ptr_list_iter = this->ptr_list_.begin();  // left side of the value
         // lterate untill theoriginal ptr position using left node as original node
         while ((*ptr_list_iter) != left_child) {
           cur_value = cur_value->next_;
@@ -470,15 +474,16 @@ class BPlusTree {
   };  // end TreeNode
 
   TreeNode *root;  // with parent node as empty for root
-  size_t order_; // split when node > order_
+  size_t order_;   // split when node > order_
 
-  BPlusTree(size_t order) {
+  BPlusTree(size_t order = 2) {
     order_ = order;
     root = new TreeNode(nullptr);
   }
   ~BPlusTree() { delete root; }
 
   bool Insert(KeyType key, ValueType value, bool allow_dup = true) {
+    common::SpinLatch::ScopedSpinLatch guard(latch_);
     bool result = false;
     TreeNode *new_root = nullptr;
     root->Insert(key, value, allow_dup);
@@ -488,7 +493,10 @@ class BPlusTree {
     return true;
   }
   bool InsertUnique(KeyType key, ValueType value) { return Insert(key, value, false); }
-  bool Delete(KeyType key, ValueType value) { return true; }
+  bool Delete(KeyType key, ValueType value) {
+    common::SpinLatch::ScopedSpinLatch guard(latch_);
+    return true;
+  }
   void GetValue(KeyType index_key, std::vector<ValueType> &results) {
     TreeNode *target_node = GetNodeRecursive(root, index_key);
     auto *cur = target_node->value_list_;
@@ -499,10 +507,7 @@ class BPlusTree {
       }
       cur = cur->next_;
     }
-
   }
-
-
 
   void GetValueDescending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> &results) {
     TreeNode *cur_node = GetNodeRecursive(root, index_high_key);
@@ -520,7 +525,8 @@ class BPlusTree {
     }
   }
 
-  void GetValueDescendingLimited(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> &results, uint32_t limit) {
+  void GetValueDescendingLimited(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> &results,
+                                 uint32_t limit) {
     if (limit == 0) return;
     uint32_t count = 0;
     TreeNode *cur_node = GetNodeRecursive(root, index_high_key);
