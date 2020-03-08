@@ -169,6 +169,8 @@ TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
     tree->GetValue(keys[i], results);
     EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
   }
+
+  delete tree;
 }
 
 }  // namespace terrier::storage::index
