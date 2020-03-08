@@ -8,93 +8,119 @@ template <typename KeyType, typename ValueType, typename KeyComparator = std::le
           typename ValueEqualityChecker = std::equal_to<ValueType>>
 class BPlusTree {
  public:
-  class TreeNode {
+  class BaseOp {
    public:
-    class InnerList {
-     public:
-      KeyType key_;
-      ValueType value_;
-      InnerList *prev_;
-      InnerList *next_;
-      std::vector<ValueType> same_key_values_;
-      // standard constructor using key and value
-      InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) {
-        key_ = key;
-        value_ = val;
-        prev_ = prev;
-        next_ = next;
-        // push the first value into the same_key_values_ as well
-        // TODO: either having a better way to manage the repeated key and value or get rid of value_ field
-        same_key_values_.push_back(val);
-      }
-      // copy constructor to construct a InnerList from reference
-      InnerList(InnerList *reference) {
-        key_ = reference->key_;
-        value_ = reference->value_;
-        prev_ = reference->prev_;
-        next_ = reference->next_;
-        same_key_values_.insert(same_key_values_.end(), reference->same_key_values_.begin(), reference->same_key_values_.end());
-      }
-      ~InnerList() {
-        // TODO: Do we need to delete every element in the same key value?
-        // delete same_key_values_;
-        // TODO: do we need to delete the key and value?
-        /*
-        delete key_;
-        delete value_;
-        */
-      }
-      std::vector<ValueType> GetAllValues() { return same_key_values_; }
+    // Key comparator
+    const KeyComparator key_cmp_obj;
+    // Raw key eq checker
+    const KeyEqualityChecker key_eq_obj;
+    // Raw key hasher
+    const KeyHashFunc key_hash_obj;
+    // Check whether values are equivalent
+    const ValueEqualityChecker value_eq_obj;
 
-      // insert at the fron of the current value node
-      void InsertFront(InnerList *new_value) {
-        TERRIER_ASSERT(new_value != nullptr, "insertFront do not accept null InnerList to be inserted");
-        InnerList *cur_value = this;
-        InnerList *prev = cur_value->prev_;
-        if (prev != nullptr) {
-          prev->next_ = new_value;
-        }
-        new_value->prev_ = prev;
-        new_value->next_ = cur_value;
-        cur_value->prev_ = new_value;
-      }
+    inline bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const { return key_cmp_obj(key1, key2); }
+    inline bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj(key1, key2); }
+    inline bool KeyCmpGreaterEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpLess(key1, key2); }
+    inline bool KeyCmpGreater(const KeyType &key1, const KeyType &key2) const { return KeyCmpLess(key2, key1); }
+    inline bool KeyCmpLessEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpGreater(key1, key2); }
+    inline size_t KeyHash(const KeyType &key) const { return key_hash_obj(key); }
+    inline bool ValueCmpEqual(const ValueType &val1, const ValueType &val2) const { return value_eq_obj(val1, val2); }
+  };
+  class InnerList : public BaseOp {
+   public:
+    KeyType key_;
+    ValueType value_;
+    InnerList *prev_;
+    InnerList *next_;
+    std::vector<ValueType> same_key_values_;
+    // standard constructor using key and value
+    InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr): BaseOp(){
+      key_ = key;
+      value_ = val;
+      prev_ = prev;
+      next_ = next;
+      // push the first value into the same_key_values_ as well
+      // TODO: either having a better way to manage the repeated key and value or get rid of value_ field
+      same_key_values_.push_back(val);
+    }
+    // copy constructor to construct a InnerList from reference
+    InnerList(InnerList *reference) : BaseOp() {
+      key_ = reference->key_;
+      value_ = reference->value_;
+      prev_ = reference->prev_;
+      next_ = reference->next_;
+      same_key_values_.insert(same_key_values_.end(), reference->same_key_values_.begin(),
+                              reference->same_key_values_.end());
+    }
+    ~InnerList() {
+      // TODO: Do we need to delete every element in the same key value?
+      // delete same_key_values_;
+      // TODO: do we need to delete the key and value?
+      /*
+      delete key_;
+      delete value_;
+      */
+    }
+    std::vector<ValueType> GetAllValues() { return same_key_values_; }
 
-      void InsertBack(InnerList *new_value) {
-        TERRIER_ASSERT(new_value != nullptr, "insertBack do not accept null InnerList to be inserted");
-        InnerList *cur_value = this;
-        InnerList *next = cur_value->next_;
-        if (next != nullptr) {
-          next->prev_ = new_value;
-        }
-        new_value->next_ = next;
-        cur_value->next_ = new_value;
-        new_value->prev_ = cur_value;
+    // insert at the fron of the current value node
+    void InsertFront(InnerList *new_value) {
+      TERRIER_ASSERT(new_value != nullptr, "insertFront do not accept null InnerList to be inserted");
+      InnerList *cur_value = this;
+      InnerList *prev = cur_value->prev_;
+      if (prev != nullptr) {
+        prev->next_ = new_value;
       }
+      new_value->prev_ = prev;
+      new_value->next_ = cur_value;
+      cur_value->prev_ = new_value;
+    }
 
-      void InsertDup(InnerList *new_value) {
-        TERRIER_ASSERT(new_value != nullptr, "insertDup do not accept null InnerList to be inserted");
-        TERRIER_ASSERT(new_value->key_ == this->key_,
-                       "insertDup should insert at Innerlist with same key as the new_value");
-        same_key_values_.push_back((new_value->value_));
-        // void the value_field to prevent deletion
-        new_value->value_ = nullptr;
-        delete new_value;
+    void InsertBack(InnerList *new_value) {
+      TERRIER_ASSERT(new_value != nullptr, "insertBack do not accept null InnerList to be inserted");
+      InnerList *cur_value = this;
+      InnerList *next = cur_value->next_;
+      if (next != nullptr) {
+        next->prev_ = new_value;
       }
-      // pop the current node from linked list
-      // set poped prev next to null
-      // re link the linked list
-      // return the poped linked list
-      InnerList *PopListHere() {
-        InnerList *cur_node = this;
-        InnerList *prev = cur_node->prev_;
-        InnerList *next = cur_node->next_;
-        cur_node->prev_ = nullptr;
-        cur_node->next_ = nullptr;
-        if (prev != nullptr) prev->next_ = next;
-        if (next != nullptr) next->prev_ = prev;
-        return cur_node;
+      new_value->next_ = next;
+      cur_value->next_ = new_value;
+      new_value->prev_ = cur_value;
+    }
+
+    void InsertDup(InnerList *new_value) {
+      TERRIER_ASSERT(new_value != nullptr, "insertDup do not accept null InnerList to be inserted");
+      TERRIER_ASSERT(this->KeyCmpEqual(new_value->key_, this->key_),
+                     "insertDup should insert at Innerlist with same key as the new_value");
+      same_key_values_.push_back((new_value->value_));
+      // void the value_field to prevent deletion
+//      new_value->value_ = nullptr;
+      delete new_value;
+    }
+    // pop the current node from linked list
+    // set poped prev next to null
+    // re link the linked list
+    // return the poped linked list
+    InnerList *PopListHere() {
+      InnerList *cur_node = this;
+      InnerList *prev = cur_node->prev_;
+      InnerList *next = cur_node->next_;
+      cur_node->prev_ = nullptr;
+      cur_node->next_ = nullptr;
+      if (prev != nullptr) prev->next_ = next;
+      if (next != nullptr) next->prev_ = prev;
+      return cur_node;
+    }
+    bool ContainDupValue(ValueType value) {
+      for (size_t i = 0; i < this->same_key_values_.size(); i++) {
+        if (this->ValueCmpEqual((this->same_key_values_)[i], value)) return true;
       }
-    };  // end class InnerList
+      return false;
+    }
+  };  // end class InnerList
+  class TreeNode : public BaseOp {
+   public:
     size_t size;
     InnerList *value_list_;             // list of value points, point at the start
     std::vector<TreeNode *> ptr_list_;  // list of pointers to the next treeNode, left node have size zero
@@ -102,7 +128,7 @@ class BPlusTree {
     TreeNode *left_sibling_;
     TreeNode *right_sibling_;  // only leaf node has siblings
     TreeNode(TreeNode *parent, InnerList *value_list = nullptr, std::vector<TreeNode *> ptr_list = nullptr,
-             TreeNode *left_sibling = nullptr, TreeNode *right_sibling = nullptr) {
+             TreeNode *left_sibling = nullptr, TreeNode *right_sibling = nullptr) : BaseOp(){
       value_list_ = value_list;
       ptr_list_ = ptr_list;
       parent_ = parent;
@@ -156,7 +182,7 @@ class BPlusTree {
     // TODO: implement delete
     TreeNode *Delete(KeyType key, ValueType value) { return nullptr; }
     TreeNode *SplitWrapper(TreeNode *cur_node, TreeNode *root_node, size_t order) {
-      std::vector<TreeNode::InnerList *> restore_stack;
+      std::vector<InnerList *> restore_stack;
       return Split(cur_node, root_node, order, restore_stack);
     }
 
@@ -191,9 +217,9 @@ class BPlusTree {
       // otherwise split the current node
       SplitReturn split_res = SplitNode(cur_node);
       // fail to split into two nodes
-//      if (split_res == nullptr) {
-//        return this->RestoreTreeFromNode(left_child, right_child, restore_stack);
-//      }
+      //      if (split_res == nullptr) {
+      //        return this->RestoreTreeFromNode(left_child, right_child, restore_stack);
+      //      }
       return Split(split_res.parent, root_node, order, restore_stack, split_res.split_value, split_res.left_child,
                    split_res.right_child);
     }
@@ -226,8 +252,8 @@ class BPlusTree {
       InnerList *next = nullptr;
       while (cur != nullptr) {
         // if contains key just append in the key linked list
-        if (cur->key_ == key) {
-          if (allow_dup || (!ContainDupValue(val))) {
+        if (cur->KeyCmpEqual(cur->key_, key)) {
+          if (allow_dup || (!cur->ContainDupValue(val))) {
             cur->InsertDup(new_list);
           } else {
             return nullptr;
@@ -236,12 +262,12 @@ class BPlusTree {
           // else, find best fit point to insert a new node
           next = cur->next_;
           // case should advance
-          if (next != nullptr && next->key_ <= key) {
+          if (next != nullptr && this->KeyCmpLessEqual(next->key_, key)) {
             cur = cur->next_;
             continue;
           } else {
             // if should insert at the front
-            if (cur->key_ > key) {
+            if (cur->KeyCmpGreater(cur->key_, key)) {
               cur->InsertFront(new_list);
               if (cur == value_list_) {
                 value_list_ = new_list;
@@ -260,12 +286,7 @@ class BPlusTree {
       }
       return this;
     }
-    bool ContainDupValue(ValueType value) {
-      for (int i = 0; i < this->same_key_values_.size(); i++) {
-        if ((this->same_key_values_)[i] == value) return true;
-      }
-      return false;
-    }
+
     /**
      * recursively find the best fit child tree node from here to leaf, return leaf
      **/
@@ -275,14 +296,14 @@ class BPlusTree {
       InnerList *next_val;
       auto ptr_iter = ptr_list_.begin();  // left side of the ptr list
       while (cur_val != nullptr) {
-        if (cur_val->key_ > key) {
+        if (cur_val->KeyCmpGreater(cur_val->key_, key)) {
           return *ptr_iter;
         }
         ++ptr_iter;
         next_val = cur_val->next_;
         if (next_val == nullptr)
           return *ptr_iter;
-        else if (next_val->key_ > key)
+        else if (next_val->KeyCmpGreater(next_val->key_, key))
           return *ptr_iter;
         else
           cur_val = next_val;
@@ -290,57 +311,58 @@ class BPlusTree {
       return *ptr_iter;
     }
     // return the top node and recursively restore child according to restoring stack
-//    TreeNode *RestoreTreeFromNode(TreeNode *left_node, TreeNode *right_node, std::vector<InnerList *> restore_stack) {
-//      // pop the restoring value
-//      InnerList *split_list = restore_stack.pop_back();
-//
-//      // delete the split value in current node if there is any
-//      InnerList *cur_val = this->value_list_;
-//      while (cur_val != nullptr) {
-//        if (cur_val->key_ == split_list->key_) {
-//          TERRIER_ASSERT(cur_val == split_list,
-//                         "the value targeting to be removed should be the same as the one in the restore stack");
-//          cur_val->PopListHere();
-//          break;
-//        }
-//        cur_val = cur_val->next_;
-//      }
-//      // if not leaf node
-//      // delete the right node from ptr list if there is any
-//      if (!this->IsLeaf()) {
-//        TERRIER_ASSERT(this->ptr_list != nullptr, "When it is no leaf ptr_list should not be null");
-//        auto ptr_iter = this->ptr_list_.begin();
-//        while (ptr_iter != this->ptr_list_.end()) {
-//          if (*ptr_iter == right_node) {
-//            this->ptr_list_.erase(ptr_iter);
-//            break;
-//          }
-//          ++ptr_iter;
-//        }
-//      }
-//
-//      // merge left node with right node:
-//      merge(left_node, right_node);
-//      // merge values together
-//      // if not leaf node, merge ptr list
-//
-//      // recursively call left child to restore
-//      TreeNode child_left = nullptr;
-//      TreeNode child_right = nullptr;
-//      int index = 0;
-//      if (!left_node->IsLeaf()) {
-//        InnerList *child_split_list = restore_stack.back();
-//        while (left_node->value_list_[index]->key_ != child_split_list->key_) {
-//          index++;
-//        }
-//        child_left = left_node->ptr_list_[index];
-//        child_right = left_node->ptr_list_[index + 1];
-//      }
-//      left_node->RestoreTreeFromNode(child_left, child_right, restore_stack);
-//      // return restored top node which is this
-//      return this;
-//      ;
-//    }
+    //    TreeNode *RestoreTreeFromNode(TreeNode *left_node, TreeNode *right_node, std::vector<InnerList *>
+    //    restore_stack) {
+    //      // pop the restoring value
+    //      InnerList *split_list = restore_stack.pop_back();
+    //
+    //      // delete the split value in current node if there is any
+    //      InnerList *cur_val = this->value_list_;
+    //      while (cur_val != nullptr) {
+    //        if (cur_val->key_ == split_list->key_) {
+    //          TERRIER_ASSERT(cur_val == split_list,
+    //                         "the value targeting to be removed should be the same as the one in the restore stack");
+    //          cur_val->PopListHere();
+    //          break;
+    //        }
+    //        cur_val = cur_val->next_;
+    //      }
+    //      // if not leaf node
+    //      // delete the right node from ptr list if there is any
+    //      if (!this->IsLeaf()) {
+    //        TERRIER_ASSERT(this->ptr_list != nullptr, "When it is no leaf ptr_list should not be null");
+    //        auto ptr_iter = this->ptr_list_.begin();
+    //        while (ptr_iter != this->ptr_list_.end()) {
+    //          if (*ptr_iter == right_node) {
+    //            this->ptr_list_.erase(ptr_iter);
+    //            break;
+    //          }
+    //          ++ptr_iter;
+    //        }
+    //      }
+    //
+    //      // merge left node with right node:
+    //      merge(left_node, right_node);
+    //      // merge values together
+    //      // if not leaf node, merge ptr list
+    //
+    //      // recursively call left child to restore
+    //      TreeNode child_left = nullptr;
+    //      TreeNode child_right = nullptr;
+    //      int index = 0;
+    //      if (!left_node->IsLeaf()) {
+    //        InnerList *child_split_list = restore_stack.back();
+    //        while (left_node->value_list_[index]->key_ != child_split_list->key_) {
+    //          index++;
+    //        }
+    //        child_left = left_node->ptr_list_[index];
+    //        child_right = left_node->ptr_list_[index + 1];
+    //      }
+    //      left_node->RestoreTreeFromNode(child_left, child_right, restore_stack);
+    //      // return restored top node which is this
+    //      return this;
+    //      ;
+    //    }
     // merge right into left, delete right treenode
     void merge(TreeNode *left_node, TreeNode *right_node) {
       TERRIER_ASSERT(left_node->IsLeaf() == right_node->IsLeaf(),
@@ -501,7 +523,7 @@ class BPlusTree {
     TreeNode *target_node = root->GetNodeRecursive(root, index_key);
     auto *cur = target_node->value_list_;
     while (cur != nullptr) {
-      if (index_key == cur->key_) {
+      if (cur->KeyCmpEqual(index_key, cur->key_)) {
         results = cur->GetAllValues();
         break;
       }
@@ -514,8 +536,8 @@ class BPlusTree {
     while (cur_node != nullptr) {
       auto cur = cur_node->value_list_;
       while (cur != nullptr) {
-        if (cur->key_ < index_low_key) return;
-        if (cur->key_ <= index_high_key) {
+        if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
+        if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
           results.reserve(results.size() + cur->GetAllValues().size());
           results.insert(results.end(), cur->GetAllValues().begin(), cur->GetAllValues().end());
         }
@@ -533,8 +555,8 @@ class BPlusTree {
     while (cur_node != nullptr) {
       auto cur = cur_node->value_list_;
       while (cur != nullptr) {
-        if (cur->key_ < index_low_key) return;
-        if (cur->key_ <= index_high_key) {
+        if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
+        if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
           results.reserve(results.size() + cur->GetAllValues().size());
           results.insert(results.end(), cur->GetAllValues().begin(), cur->GetAllValues().end());
           ++count;
