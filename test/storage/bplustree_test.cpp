@@ -160,12 +160,15 @@ TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
   std::vector<int64_t> keys;
   std::vector<int64_t> results;
   keys.reserve(key_num);
-
+  std::cerr << "================= begin insert ==============\n";
   for (int64_t i = 0; i < key_num; i++) {
     keys.emplace_back(i);
+  }
+
+  for (int64_t i = 0; i < key_num; i++) { 
     tree->Insert(keys[i], keys[i]);
   }
-  std::cerr << "insert finish\n";
+  std::cerr << "================= finish insert ==============\n"
   for (int64_t i = 0; i < key_num; i++) {
     EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
   }  
