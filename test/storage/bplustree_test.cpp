@@ -153,7 +153,7 @@ TEST_F(BPlusTreeTests, NaiveSequentialInsert) {
 }
 
 TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
-  const uint32_t key_num = 1;
+  const uint32_t key_num = 32;
   terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
       new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
@@ -172,5 +172,29 @@ TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
 
   delete tree;
 }
+
+TEST_F(BPlusTreeTests, NaiveDuplicateScanTest) {
+  const uint32_t key_num = 32;
+  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+
+  std::vector<int64_t> keys;
+  std::vector<int64_t> results;
+  keys.reserve(key_num);
+
+  for (int64_t i = 0; i < key_num; i++) {
+    keys.emplace_back(i);
+  }
+  for (int64_t i = 0; i < key_num; i++) {
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+    tree->Insert(keys[i], keys[i]);
+    tree->GetValue(keys[i], results);
+  EXPECT_EQ(results, std::vector<int64_t>(3, keys[i]));
+  }
+
+  delete tree;
+}
+
 
 }  // namespace terrier::storage::index
