@@ -324,7 +324,7 @@ TEST_F(BPlusTreeTests, ManyInsert) {
 }
 
 TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
-  const uint32_t key_num = 8;
+  const uint32_t key_num = 32;
   terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
       new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
@@ -346,7 +346,7 @@ TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
 }
 
 TEST_F(BPlusTreeTests, SequentialScanTest) {
-  const uint32_t key_num = 1024*1024;
+  const uint32_t key_num = 1024;
   terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
       new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
@@ -367,7 +367,7 @@ TEST_F(BPlusTreeTests, SequentialScanTest) {
 }
 
 TEST_F(BPlusTreeTests, NaiveDuplicateScanTest) {
-  const uint32_t key_num = 2;
+  const uint32_t key_num = 32;
   terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
       new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
@@ -391,7 +391,7 @@ TEST_F(BPlusTreeTests, NaiveDuplicateScanTest) {
 }
 
 TEST_F(BPlusTreeTests, DuplicateScanTest) {
-  const uint32_t key_num = 1024*1024;
+  const uint32_t key_num = 1024;
   terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
       new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
