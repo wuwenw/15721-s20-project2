@@ -127,13 +127,11 @@ class BPlusTree {
     TreeNode *parent_;
     TreeNode *left_sibling_;
     TreeNode *right_sibling_;  // only leaf node has siblings
-    TreeNode(TreeNode *parent, InnerList *value_list = nullptr, std::vector<TreeNode *> ptr_list = nullptr,
-             TreeNode *left_sibling = nullptr, TreeNode *right_sibling = nullptr) : BaseOp(){
+    TreeNode(TreeNode *parent, InnerList *value_list = nullptr) : BaseOp(){
       value_list_ = value_list;
-      ptr_list_ = ptr_list;
       parent_ = parent;
-      left_sibling_ = left_sibling;
-      right_sibling_ = right_sibling;
+      left_sibling_ = nullptr;
+      right_sibling_ = nullptr;
       size = 0;
       while (value_list != nullptr) {
         size++;
