@@ -632,7 +632,7 @@ class BPlusTree {
     q.push(root);
     while (!q.empty()) {
         TreeNode *curr = q.pop();
-        total_usage += GetNodeUsage(curr);
+        total_usage += GetNodeHeapUsage(curr);
 
         for (int i = 0; i < curr->ptr_list.size(); i++)
             q.push(curr->ptr_list[i]);
@@ -640,7 +640,7 @@ class BPlusTree {
     return total_usage;
   }
 
-  size_t GetNodeUsage(TreeNode *node) const final {
+  size_t GetNodeHeapUsage(TreeNode *node) const final {
     size_t count = 0;
     if (node == nullptr)
         return 0;
