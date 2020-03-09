@@ -52,7 +52,7 @@ class BPlusTree {
       prev_ = nullptr;
       next_ = nullptr;
     }
-    ~InnerList() {}
+    ~InnerList() = default;
     std::vector<ValueType> GetAllValues() { return same_key_values_; }
 
     // insert at the fron of the current value node
@@ -160,10 +160,10 @@ class BPlusTree {
       TreeNode *result = nullptr;
       if (IsLeaf()) {
         InnerList *new_value = new InnerList(key, val);
-        result = insertAtLeafNode(new_value, allow_dup);
+        result = InsertAtLeafNode(new_value, allow_dup);
         if (result == nullptr) delete new_value;
       } else {
-        TreeNode *child_node = findBestFitChild(key);
+        TreeNode *child_node = FindBestFitChild(key);
         result = child_node->Insert(key, val, allow_dup);
       }
       return result;
@@ -212,7 +212,7 @@ class BPlusTree {
       if (IsLeaf()) {
         return node;
       } else {
-        TreeNode *child_node = findBestFitChild(index_key);
+        TreeNode *child_node = FindBestFitChild(index_key);
         return child_node->GetNodeRecursive(child_node, index_key);
       }
     }
@@ -301,8 +301,8 @@ class BPlusTree {
       return cur;
     }
     // assuming this is a leafNode
-    TreeNode *insertAtLeafNode(InnerList *new_list, bool allow_dup = true) {
-      TERRIER_ASSERT(this->IsLeaf(), "insertAtLeafNode should be called from leaf node");
+    TreeNode *InsertAtLeafNode(InnerList *new_list, bool allow_dup = true) {
+      TERRIER_ASSERT(this->IsLeaf(), "InsertAtLeafNode should be called from leaf node");
       if (this->size == 0) {
         this->value_list_ = new_list;
         this->size++;
@@ -352,8 +352,8 @@ class BPlusTree {
     /**
      * recursively find the best fit child tree node from here to leaf, return leaf
      **/
-    TreeNode *findBestFitChild(KeyType key) {
-      TERRIER_ASSERT(!this->IsLeaf(), "findBestFitChild should be called from non-leaf node");
+    TreeNode *FindBestFitChild(KeyType key) {
+      TERRIER_ASSERT(!this->IsLeaf(), "FindBestFitChild should be called from non-leaf node");
       InnerList *cur_val = value_list_;
       InnerList *next_val;
       auto ptr_iter = ptr_list_.begin();  // left side of the ptr list
@@ -373,7 +373,7 @@ class BPlusTree {
       return *ptr_iter;
     }
     // merge right into left, delete right treenode
-    void merge(TreeNode *left_node, TreeNode *right_node) {
+    void Merge(TreeNode *left_node, TreeNode *right_node) {
       TERRIER_ASSERT(left_node->IsLeaf() == right_node->IsLeaf(),
                      "THe merging two nodes should be both leaf or both non-leaf");
 
