@@ -1,6 +1,5 @@
 #include <vector>
 #include "storage/index/index.h"
-#include "bwtree/bwtree.h"
 
 namespace terrier::storage::index {
 
@@ -20,15 +19,13 @@ class BPlusTree {
     // Check whether values are equivalent
     const ValueEqualityChecker value_eq_obj;
 
-//    inline bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const {
-//      return key_cmp_obj(key1, key2);
-//    }
-//    inline bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj(key1, key2); }
-//    inline bool KeyCmpGreaterEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpLess(key1, key2); }
-//    inline bool KeyCmpGreater(const KeyType &key1, const KeyType &key2) const { return KeyCmpLess(key2, key1); }
-//    inline bool KeyCmpLessEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpGreater(key1, key2); }
-//    inline size_t KeyHash(const KeyType &key) const { return key_hash_obj(key); }
-//    inline bool ValueCmpEqual(const ValueType &val1, const ValueType &val2) const { return value_eq_obj(val1, val2); }
+    bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const { return key_cmp_obj(key1, key2); }
+    bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj(key1, key2); }
+    bool KeyCmpGreaterEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpLess(key1, key2); }
+    bool KeyCmpGreater(const KeyType &key1, const KeyType &key2) const { return KeyCmpLess(key2, key1); }
+    bool KeyCmpLessEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpGreater(key1, key2); }
+    size_t KeyHash(const KeyType &key) const { return key_hash_obj(key); }
+    bool ValueCmpEqual(const ValueType &val1, const ValueType &val2) const { return value_eq_obj(val1, val2); }
   };
   class InnerList : public BaseOp {
    public:
