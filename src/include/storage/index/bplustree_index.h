@@ -42,7 +42,7 @@ class BPlusTreeIndex final : public Index {
 
   size_t GetHeapUsage() const final {
     // FIXME(15-721 project2): access the underlying data structure and report the heap usage
-    return 0;
+    return bplustree_->GetHeapUsage();
   }
 
   bool Insert(const common::ManagedPointer<transaction::TransactionContext> txn, const ProjectedRow &tuple,

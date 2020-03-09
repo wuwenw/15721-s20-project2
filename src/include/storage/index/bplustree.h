@@ -323,6 +323,36 @@ class BPlusTree {
       return result;
     }
 
+    size_t GetNodeHeapUsage(TreeNode *node) const final {
+      size_t count = 0;
+      if (node == nullptr)
+        return 0;
+      // count heap usage for current node
+      // TreeNode heap usage:
+      //        size_t size;
+      //        InnerList *value_list_;              // list of value points, point at the start
+      //        std::vector<TreeNode *> *ptr_list_;  // list of pointers to the next treeNode, left node have size zero
+      //        TreeNode *parent_;
+      //        TreeNode *left_sibling_;
+      //        TreeNode *right_sibling_;
+
+      count += sizeof(size_t) + sizeof(TreeNode *) * (3 + node->ptr_list_.size()) + sizeof(InnerList *);
+
+      InnerList *curr = node->value_list_;
+      while (curr != nullptr) {
+        // InnerList heap usage:
+        //            KeyType key_;
+        //            ValueType value_;
+        //            InnerList *prev_;
+        //            InnerList *next_;
+        //            std::vector<ValueType> *same_key_values_;
+        count +=
+            sizeof(KeyType) + sizeof(ValueType) * (1 + curr->same_key_values_.size()) + sizeof(InnerList *) * 2;
+        curr = curr->next;
+      }
+      return count;
+    }
+
    private:
     InnerList *GetEndValue() {
       InnerList *cur = value_list_;
@@ -631,6 +661,21 @@ class BPlusTree {
       }
       cur_node = cur_node->left_sibling_;
     }
+  }
+
+  size_t GetHeapUsage() const final {
+    size_t total_usage = 0;
+    if (root == nullptr)
+      return 0;
+    queue < TreeNode * > q;
+    q.push(root);
+    while (!q.empty()) {
+      TreeNode *curr = q.pop();
+      total_usage += GetNodeHeapUsage(curr);
+      for (int i = 0; i < curr->ptr_list.size(); i++)
+        q.push(curr->ptr_list[i]);
+    }
+    return total_usage;
   }
 
  private:
