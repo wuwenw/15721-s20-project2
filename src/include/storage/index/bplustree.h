@@ -214,7 +214,6 @@ class BPlusTree {
       }
       TreeNode *child_node = FindBestFitChild(index_key);
       return child_node->GetNodeRecursive(child_node, index_key);
-
     }
 
     // assume the node exceeds capacity
@@ -341,7 +340,6 @@ class BPlusTree {
         cur->InsertBack(new_list);
         size++;
         break;
-
       }
       return this;
     }
@@ -360,8 +358,7 @@ class BPlusTree {
         }
         next_val = cur_val->next_;
         ++ptr_iter;
-        if (next_val == nullptr || next_val->KeyCmpGreater(next_val->key_, key))
-          return *ptr_iter;
+        if (next_val == nullptr || next_val->KeyCmpGreater(next_val->key_, key)) return *ptr_iter;
         cur_val = next_val;
       }
       return *ptr_iter;
