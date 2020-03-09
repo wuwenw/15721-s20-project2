@@ -161,7 +161,7 @@ class BPlusTree {
       if (IsLeaf()) {
         InnerList *new_value = new InnerList(key, val);
         result = insertAtLeafNode(new_value, allow_dup);
-        if (result = nullptr) delete new_value;
+        if (result == nullptr) delete new_value;
       } else {
         TreeNode *child_node = findBestFitChild(key);
         result = child_node->Insert(key, val, allow_dup);
