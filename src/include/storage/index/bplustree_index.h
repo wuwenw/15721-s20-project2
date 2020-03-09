@@ -80,7 +80,7 @@ class BPlusTreeIndex final : public Index {
     };
     bool pred = true;
     std::vector<TupleSlot> value_list;
-    bplustree_->GetValue(index_key, value_list);
+    bplustree_->GetValue(index_key, &value_list);
     for (TupleSlot &val : value_list) {
       if (predicate(val) == true) {
         predicate_satisfied = true;
