@@ -311,6 +311,70 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
   // PrintTree(tree);
   delete tree;
 }
+
+TEST_F(BPlusTreeTests, ComplexRandomInsert) {
+  // This defines the key space (0 ~ (1M - 1))
+  const uint32_t key_num = 1;
+  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+
+  std::vector<int64_t> keys;
+  keys.reserve(key_num);
+
+  for (int64_t i = 0; i < key_num; i++) {
+    keys.emplace_back(i);
+  }
+  tree->Insert(12, 12);
+  tree->Insert(36, 36);
+  tree->Insert(9, 9);
+  tree->Insert(10, 10);
+  tree->Insert(7, 7);
+  tree->Insert(15, 15);
+  tree->Insert(81, 81);
+  tree->Insert(72, 72);
+  tree->Insert(78, 78);
+  tree->Insert(25, 25);
+  tree->Insert(31, 31);
+  tree->Insert(0, 0);
+  tree->Insert(2, 2);
+  tree->Insert(12, 12);
+  tree->Insert(36, 36);
+  tree->Insert(9, 9);
+  tree->Insert(10, 10);
+  tree->Insert(7, 7);
+  tree->Insert(15, 15);
+  tree->Insert(81, 81);
+  tree->Insert(72, 72);
+  tree->Insert(78, 78);
+  tree->Insert(25, 25);
+  tree->Insert(31, 31);
+  tree->Insert(0, 0);
+  tree->Insert(2, 2);
+  // l1
+  EXPECT_EQ(tree->root->size, 2);
+  EXPECT_EQ(tree->root->value_list_->key_, 12);
+  EXPECT_EQ(tree->root->value_list_->next_->key_, 36);
+  EXPECT_EQ(tree->root->ptr_list_.size(), 3);
+  EXPECT_EQ(tree->root->ptr_list_[0]->value_list_->key_, 2);
+  EXPECT_EQ(tree->root->ptr_list_[0]->value_list_->next_->key_, 9);
+  EXPECT_EQ(tree->root->ptr_list_[1]->value_list_->key_, 15);
+  EXPECT_EQ(tree->root->ptr_list_[1]->value_list_->next_->key_, 25);
+  EXPECT_EQ(tree->root->ptr_list_[2]->value_list_->key_, 72);
+  EXPECT_EQ(tree->root->ptr_list_[2]->value_list_->next_->key_, 78);
+  EXPECT_EQ(tree->InsertUnique(12, 12), false);
+  EXPECT_EQ(tree->InsertUnique(36, 36), false);
+  EXPECT_EQ(tree->InsertUnique(7, 7), false);
+  EXPECT_EQ(tree->InsertUnique(9, 9), false);
+  EXPECT_EQ(tree->InsertUnique(10, 10), false);
+  EXPECT_EQ(tree->InsertUnique(72, 72), false);
+  EXPECT_EQ(tree->InsertUnique(78, 78), false);
+  EXPECT_EQ(tree->InsertUnique(25, 25), false);
+  EXPECT_EQ(tree->InsertUnique(31, 31), false);
+
+
+  // PrintTree(tree);
+  delete tree;
+}
 TEST_F(BPlusTreeTests, ManyInsert) {
   // This defines the key space (0 ~ (1M - 1))
   terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =

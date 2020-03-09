@@ -473,17 +473,21 @@ class BPlusTree {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *new_root = nullptr;
     TreeNode *leaf_node = root->Insert(key, value, allow_dup);
+    if (leaf_node == nullptr) return false;
     new_root = RebalanceTree(leaf_node);
     if (new_root == nullptr) return false;
     root = new_root;
     return true;
   }
-  bool InsertUnique(KeyType key, ValueType value) { return Insert(key, value, false); }
+  bool InsertUnique(KeyType key, ValueType value) {
+    return Insert(key, value, false);
+  }
   bool Delete(KeyType key, ValueType value) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
     return true;
   }
   void GetValue(KeyType index_key, std::vector<ValueType> &results) {
+    common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *target_node = root->GetNodeRecursive(root, index_key);
     auto *cur = target_node->value_list_;
     while (cur != nullptr) {
