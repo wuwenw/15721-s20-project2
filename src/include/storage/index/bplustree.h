@@ -134,7 +134,7 @@ class BPlusTree {
       size_t parent_index_;
     };
 
-    bool IsLeaf() { return ptr_list_.size() == 0; }
+    bool IsLeaf() { return ptr_list_.empty(); }
     bool ShouldSplit(size_t order) { return size_ > order; }
     /**
      * Recursively find the position to perform insert.
