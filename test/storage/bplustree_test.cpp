@@ -418,4 +418,11 @@ TEST_F(BPlusTreeTests, DuplicateScanTest) {
   delete tree;
   }
 }  // namespace terrier::storage::index
->>>>>>> 7a013495db75245fc59b623cd29d5f0efade1df2
+
+TEST_F(BPlusTreeTests, EmptyTreeGetHeapUsage) {
+  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+          new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+  tree->root = nullptr;
+  EXPECT_EQ(tree->GetHeapUsage(), 0);
+}
+

@@ -640,7 +640,7 @@ class BPlusTree {
     return total_usage;
   }
 
-  size_t GetHeapUsage(TreeNode *node) const final {
+  size_t GetNodeUsage(TreeNode *node) const final {
     size_t count = 0;
     if (node == nullptr)
         return 0;
