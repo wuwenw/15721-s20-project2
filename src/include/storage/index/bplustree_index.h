@@ -140,7 +140,7 @@ class BPlusTreeIndex final : public Index {
     for (const auto &result : results) {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
     }
-
+    std::cerr << "get size "+ std::to_string(value_list->size()) +"\n";
     TERRIER_ASSERT(!(metadata_.GetSchema().Unique()) || (metadata_.GetSchema().Unique() && value_list->size() <= 1),
                    "Invalid number of results for unique index.");
   }
