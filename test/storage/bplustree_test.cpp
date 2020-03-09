@@ -388,7 +388,7 @@ TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
     tree->Insert(keys[i], keys[i]);
   }
   for (int64_t i = 0; i < key_num; i++) {
-    tree->GetValue(keys[i], results);
+    tree->GetValue(keys[i], &results);
     EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
   }
 
@@ -408,7 +408,7 @@ TEST_F(BPlusTreeTests, SequentialScanTest) {
     tree->Insert(keys[i], keys[i]);
   }
   for (int64_t i = 0; i < key_num; i++) {
-    tree->GetValue(keys[i], results);
+    tree->GetValue(keys[i], &results);
     EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
   }
   delete tree;
@@ -430,7 +430,7 @@ TEST_F(BPlusTreeTests, NaiveDuplicateScanTest) {
     tree->Insert(keys[i], keys[i]);
   }
   for (int64_t i = 0; i < key_num; i++) {
-    tree->GetValue(keys[i], results);
+    tree->GetValue(keys[i], &results);
     EXPECT_EQ(results, std::vector<int64_t>(3, keys[i]));
   }
 
@@ -455,7 +455,7 @@ TEST_F(BPlusTreeTests, DuplicateScanTest) {
     tree->Insert(keys[i], keys[i]);
   }
   for (int64_t i = 0; i < key_num; i++) {
-    tree->GetValue(keys[i], results);
+    tree->GetValue(keys[i], &results);
     EXPECT_EQ(results, std::vector<int64_t>(5, keys[i]));
   }
 
