@@ -1,11 +1,11 @@
+#include "storage/index/bplustree.h"
 #include <algorithm>
 #include <random>
 #include <vector>
 #include "bwtree/bwtree.h"
-#include "storage/index/bplustree.h"
 #include "gtest/gtest.h"
-#include "test_util/random_test_util.h"
 #include "test_util/multithread_test_util.h"
+#include "test_util/random_test_util.h"
 #include "test_util/test_harness.h"
 
 namespace terrier::storage::index {
@@ -19,23 +19,17 @@ void PrintNode(terrier::storage::index::BPlusTree<int64_t, int64_t>::TreeNode *n
   terrier::storage::index::BPlusTree<int64_t, int64_t>::InnerList *value = node->value_list_;
   size_t idx = 0;
   while (value != nullptr) {
-    std::cerr << value->key_ << "-";
     value = value->next_;
   }
-  std::cerr << "    Node size" << node->size << "\n";
-  for (idx = 0; idx < node->ptr_list_.size(); idx ++) {
-      PrintNode(node->ptr_list_[idx]);
+  for (idx = 0; idx < node->ptr_list_.size(); idx++) {
+    PrintNode(node->ptr_list_[idx]);
   }
-  std::cerr << "-------------\n";
-
 }
 void PrintTree(terrier::storage::index::BPlusTree<int64_t, int64_t> *tree) {
   if (tree->root != nullptr) {
     PrintNode(tree->root);
   }
 }
-
-
 
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, EmptyTest) { EXPECT_TRUE(true); }
@@ -108,7 +102,6 @@ TEST_F(BPlusTreeTests, NaiveSequentialInsert) {
   EXPECT_EQ(tree->root->ptr_list_[2]->value_list_->next_->key_, 3);
   EXPECT_EQ(tree->root->ptr_list_[2]->size, 2);
 
-
   EXPECT_EQ(tree->root->ptr_list_[0]->right_sibling_, tree->root->ptr_list_[1]);
   EXPECT_EQ(tree->root->ptr_list_[0]->right_sibling_->right_sibling_, tree->root->ptr_list_[2]);
   EXPECT_EQ(tree->root->ptr_list_[2]->left_sibling_, tree->root->ptr_list_[1]);
@@ -148,7 +141,6 @@ TEST_F(BPlusTreeTests, NaiveSequentialInsert) {
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->value_list_->next_->key_, 4);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[0]->size, 1);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->size, 2);
-  std::cerr << "hahaha\n";
   tree->Insert(4, 5);
   PrintTree(tree);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->value_list_->next_->same_key_values_[0], 4);
@@ -225,7 +217,6 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
   EXPECT_EQ(tree->root->ptr_list_[2]->value_list_->next_->key_, 12);
   EXPECT_EQ(tree->root->ptr_list_[2]->size, 2);
 
-
   EXPECT_EQ(tree->root->ptr_list_[0]->right_sibling_, tree->root->ptr_list_[1]);
   EXPECT_EQ(tree->root->ptr_list_[0]->right_sibling_->right_sibling_, tree->root->ptr_list_[2]);
   EXPECT_EQ(tree->root->ptr_list_[2]->left_sibling_, tree->root->ptr_list_[1]);
@@ -265,12 +256,10 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->value_list_->next_->key_, 16);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[0]->size, 1);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->size, 2);
-  std::cerr << "hahaha\n";
   tree->Insert(16, 20);
   PrintTree(tree);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->value_list_->next_->same_key_values_[0], 16);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[1]->value_list_->next_->same_key_values_[1], 20);
-  
 
   tree->Insert(5, 5);
   tree->Insert(11, 11);
@@ -279,7 +268,6 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[0]->parent_->size, 1);
   EXPECT_EQ(tree->root->ptr_list_[1]->ptr_list_[0]->parent_->ptr_list_.size(), 2);
   EXPECT_EQ(tree->root->ptr_list_[0]->ptr_list_[1]->size, 2);
-  std::cerr << "pre insert 10, 10\n";
   PrintTree(tree);
   tree->Insert(10, 10);
   PrintTree(tree);
@@ -287,8 +275,9 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
   // PrintNode(tree->root->ptr_list_[1]);
   // std::cerr << "parent\n";
   // PrintNode(tree->root->ptr_list_[1]->ptr_list_[0]->parent_);
-  // terrier::storage::index::BPlusTree<int64_t, int64_t>::TreeNode::SplitReturn a = tree->root->SplitNode(tree->root->ptr_list_[1]->ptr_list_[0]);
-  
+  // terrier::storage::index::BPlusTree<int64_t, int64_t>::TreeNode::SplitReturn a =
+  // tree->root->SplitNode(tree->root->ptr_list_[1]->ptr_list_[0]);
+
   // std::cerr << "two children\n";
   // std::cerr << a.left_child->value_list_->key_<<"\n";
   // std::cerr << a.right_child->value_list_->key_<<"\n";
@@ -331,16 +320,14 @@ TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
   std::vector<int64_t> keys;
   std::vector<int64_t> results;
   keys.reserve(key_num);
-  std::cerr << "================= begin insert ==============\n";
   for (int64_t i = 0; i < key_num; i++) {
     keys.emplace_back(i);
     tree->Insert(keys[i], keys[i]);
   }
-  std::cerr << "================= finish insert ==============\n";
   for (int64_t i = 0; i < key_num; i++) {
     tree->GetValue(keys[i], results);
     EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
-  }  
+  }
 
   delete tree;
 }
@@ -353,16 +340,14 @@ TEST_F(BPlusTreeTests, SequentialScanTest) {
   std::vector<int64_t> keys;
   std::vector<int64_t> results;
   keys.reserve(key_num);
-  std::cerr << "================= begin insert ==============\n";
   for (int64_t i = 0; i < key_num; i++) {
     keys.emplace_back(i);
     tree->Insert(keys[i], keys[i]);
   }
-  std::cerr << "================= finish insert ==============\n";
   for (int64_t i = 0; i < key_num; i++) {
     tree->GetValue(keys[i], results);
     EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));
-}
+  }
   delete tree;
 }
 
@@ -381,7 +366,6 @@ TEST_F(BPlusTreeTests, NaiveDuplicateScanTest) {
     tree->Insert(keys[i], keys[i]);
     tree->Insert(keys[i], keys[i]);
   }
-  std::cerr << "================= finish insert ==============\n";
   for (int64_t i = 0; i < key_num; i++) {
     tree->GetValue(keys[i], results);
     EXPECT_EQ(results, std::vector<int64_t>(3, keys[i]));
@@ -407,12 +391,11 @@ TEST_F(BPlusTreeTests, DuplicateScanTest) {
     tree->Insert(keys[i], keys[i]);
     tree->Insert(keys[i], keys[i]);
   }
-  std::cerr << "================= finish insert ==============\n";
   for (int64_t i = 0; i < key_num; i++) {
     tree->GetValue(keys[i], results);
     EXPECT_EQ(results, std::vector<int64_t>(5, keys[i]));
   }
 
   delete tree;
-  }
+}
 }  // namespace terrier::storage::index

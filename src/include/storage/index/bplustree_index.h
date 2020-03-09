@@ -51,7 +51,7 @@ class BPlusTreeIndex final : public Index {
                    "This Insert is designed for secondary indexes with no uniqueness constraints.");
     KeyType index_key;
     index_key.SetFromProjectedRow(tuple, metadata_, metadata_.GetSchema().GetColumns().size());
-    const bool result = bplustree_->Insert( index_key, location );
+    const bool result = bplustree_->Insert(index_key, location);
 
     TERRIER_ASSERT(
         result,
@@ -200,14 +200,14 @@ class BPlusTreeIndex final : public Index {
     index_high_key.SetFromProjectedRow(high_key, metadata_, metadata_.GetSchema().GetColumns().size());
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-        std::vector<TupleSlot> results;
+    std::vector<TupleSlot> results;
     bplustree_->GetValueDescendingLimited(index_low_key, index_high_key, results, limit);
     value_list->reserve(results.size());
     for (const auto &result : results) {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
     }
   }
-  };
+};
 
 extern template class BPlusTreeIndex<CompactIntsKey<8>>;
 extern template class BPlusTreeIndex<CompactIntsKey<16>>;
