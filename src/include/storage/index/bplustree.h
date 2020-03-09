@@ -12,7 +12,6 @@ class BPlusTree {
  public:
   class BaseOp {
    public:
-    BaseOp() = default;
     // Key comparator
     const KeyComparator key_cmp_obj_;
     // Raw key eq checker
@@ -30,7 +29,7 @@ class BPlusTree {
     size_t KeyHash(const KeyType &key) const { return key_hash_obj_(key); }
     bool ValueCmpEqual(const ValueType &val1, const ValueType &val2) const { return value_eq_obj_(val1, val2); }
   };
-  class InnerList : public BaseOp {
+  class InnerList {
    public:
     KeyType key_;
     ValueType value_;
@@ -38,7 +37,7 @@ class BPlusTree {
     InnerList *next_;
     std::vector<ValueType> same_key_values_;
     // standard constructor using key and value
-    InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) : BaseOp() {
+    InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) {
       key_ = key;
       value_ = val;
       prev_ = prev;
@@ -47,7 +46,7 @@ class BPlusTree {
       same_key_values_.push_back(val);
     }
     // copy constructor to construct a InnerList from reference
-    explicit InnerList(InnerList *reference) : BaseOp() {
+    explicit InnerList(InnerList *reference) {
       key_ = reference->key_;
       value_ = reference->value_;
       prev_ = nullptr;
@@ -111,7 +110,7 @@ class BPlusTree {
       return false;
     }
   };  // end class InnerList
-  class TreeNode : public BaseOp {
+  class TreeNode {
    public:
     size_t size;
     InnerList *value_list_;             // list of value points, point at the start
@@ -119,7 +118,7 @@ class BPlusTree {
     TreeNode *parent_;
     TreeNode *left_sibling_;
     TreeNode *right_sibling_;  // only leaf node has siblings
-    explicit TreeNode(TreeNode *parent, InnerList *value_list = nullptr) : BaseOp() {
+    explicit TreeNode(TreeNode *parent, InnerList *value_list = nullptr) {
       value_list_ = value_list;
       parent_ = parent;
       left_sibling_ = nullptr;
