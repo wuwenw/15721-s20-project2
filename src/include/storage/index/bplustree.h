@@ -644,7 +644,7 @@ class BPlusTree {
       TreeNode *curr = q.front();
       q.pop();
       total_usage += GetNodeHeapUsage(curr);
-      for (int i = 0; i < curr->ptr_list_.size(); i++)
+      for (auto i = 0; i < curr->ptr_list_.size(); i++)
         q.push(curr->ptr_list_[i]);
     }
     return total_usage;
@@ -675,7 +675,7 @@ class BPlusTree {
       //            std::vector<ValueType> *same_key_values_;
       count +=
           sizeof(KeyType) + sizeof(ValueType) * (1 + curr->same_key_values_.size()) + sizeof(InnerList *) * 2;
-      curr = curr->next;
+      curr = curr->next_;
     }
     return count;
   }
