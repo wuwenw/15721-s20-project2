@@ -37,8 +37,7 @@ TEST_F(BPlusTreeTests, EmptyTest) { EXPECT_TRUE(true); }
 TEST_F(BPlusTreeTests, NaiveSequentialInsert) {
   // This defines the key space (0 ~ (1M - 1))
   const uint32_t key_num = 1;
-  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
-      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+  auto *tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
   std::vector<int64_t> keys;
   keys.reserve(key_num);
@@ -152,8 +151,7 @@ TEST_F(BPlusTreeTests, NaiveSequentialInsert) {
 TEST_F(BPlusTreeTests, NaiveRandomInsert) {
   // This defines the key space (0 ~ (1M - 1))
   const uint32_t key_num = 1;
-  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
-      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+  auto *tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
   std::vector<int64_t> keys;
   keys.reserve(key_num);
@@ -304,8 +302,7 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
 TEST_F(BPlusTreeTests, ComplexRandomInsert) {
   // This defines the key space (0 ~ (1M - 1))
   const uint32_t key_num = 1;
-  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
-      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+  auto *tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
   std::vector<int64_t> keys;
   keys.reserve(key_num);
@@ -365,8 +362,7 @@ TEST_F(BPlusTreeTests, ComplexRandomInsert) {
 }
 TEST_F(BPlusTreeTests, ManyInsert) {
   // This defines the key space (0 ~ (1M - 1))
-  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
-      new terrier::storage::index::BPlusTree<int64_t, int64_t>(8);
+  auto *tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(8);
 
   for (int64_t i = 18; i < 100000; i++) {
     tree->InsertUnique(i, i);
@@ -377,8 +373,7 @@ TEST_F(BPlusTreeTests, ManyInsert) {
 
 TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
   const uint32_t key_num = 32;
-  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
-      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+  auto *tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
   std::vector<int64_t> keys;
   std::vector<int64_t> results;
@@ -397,8 +392,7 @@ TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
 
 TEST_F(BPlusTreeTests, SequentialScanTest) {
   const uint32_t key_num = 1024;
-  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
-      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+  auto *tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
   std::vector<int64_t> keys;
   std::vector<int64_t> results;
@@ -416,8 +410,7 @@ TEST_F(BPlusTreeTests, SequentialScanTest) {
 
 TEST_F(BPlusTreeTests, NaiveDuplicateScanTest) {
   const uint32_t key_num = 32;
-  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
-      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+  auto *tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
   std::vector<int64_t> keys;
   std::vector<int64_t> results;
@@ -439,8 +432,7 @@ TEST_F(BPlusTreeTests, NaiveDuplicateScanTest) {
 
 TEST_F(BPlusTreeTests, DuplicateScanTest) {
   const uint32_t key_num = 1024;
-  terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
-      new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+  auto *tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
 
   std::vector<int64_t> keys;
   std::vector<int64_t> results;
