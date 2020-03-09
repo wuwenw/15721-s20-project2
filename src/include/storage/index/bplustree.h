@@ -664,11 +664,11 @@ class BPlusTree {
     }
   }
 
-  size_t GetHeapUsage() const final {
+  size_t GetHeapUsage() const {
     size_t total_usage = 0;
     if (root == nullptr)
       return 0;
-    queue < TreeNode * > q;
+    std::queue <TreeNode *> q;
     q.push(root);
     while (!q.empty()) {
       TreeNode *curr = q.pop();
