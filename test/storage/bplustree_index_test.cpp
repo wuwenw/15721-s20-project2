@@ -110,76 +110,76 @@ class BPlusTreeIndexTests : public TerrierTest {
  * in the index and table.
  */
 // NOLINTNEXTLINE
-// TEST_F(BPlusTreeIndexTests, UniqueInsert) {
-//   const uint32_t num_inserts = 100000;  // number of tuples/primary keys for each worker to attempt to insert
-//   auto workload = [&](uint32_t worker_id) {
-//     auto *const key_buffer =
-//         common::AllocationUtil::AllocateAligned(unique_index_->GetProjectedRowInitializer().ProjectedRowSize());
-//     auto *const insert_key = unique_index_->GetProjectedRowInitializer().InitializeRow(key_buffer);
+TEST_F(BPlusTreeIndexTests, UniqueInsert) {
+  const uint32_t num_inserts = 100000;  // number of tuples/primary keys for each worker to attempt to insert
+  auto workload = [&](uint32_t worker_id) {
+    auto *const key_buffer =
+        common::AllocationUtil::AllocateAligned(unique_index_->GetProjectedRowInitializer().ProjectedRowSize());
+    auto *const insert_key = unique_index_->GetProjectedRowInitializer().InitializeRow(key_buffer);
 
-//     // some threads count up, others count down. This is to mix whether threads abort for write-write conflict or
-//     // previously committed versions
-//     if (worker_id % 2 == 0) {
-//       for (uint32_t i = 0; i < num_inserts; i++) {
-//         auto *const insert_txn = txn_manager_->BeginTransaction();
-//         auto *const insert_redo =
-//             insert_txn->StageWrite(CatalogTestUtil::TEST_DB_OID, CatalogTestUtil::TEST_TABLE_OID, tuple_initializer_);
-//         auto *const insert_tuple = insert_redo->Delta();
-//         *reinterpret_cast<int32_t *>(insert_tuple->AccessForceNotNull(0)) = i;
-//         const auto tuple_slot = sql_table_->Insert(common::ManagedPointer(insert_txn), insert_redo);
+    // some threads count up, others count down. This is to mix whether threads abort for write-write conflict or
+    // previously committed versions
+    if (worker_id % 2 == 0) {
+      for (uint32_t i = 0; i < num_inserts; i++) {
+        auto *const insert_txn = txn_manager_->BeginTransaction();
+        auto *const insert_redo =
+            insert_txn->StageWrite(CatalogTestUtil::TEST_DB_OID, CatalogTestUtil::TEST_TABLE_OID, tuple_initializer_);
+        auto *const insert_tuple = insert_redo->Delta();
+        *reinterpret_cast<int32_t *>(insert_tuple->AccessForceNotNull(0)) = i;
+        const auto tuple_slot = sql_table_->Insert(common::ManagedPointer(insert_txn), insert_redo);
 
-//         *reinterpret_cast<int32_t *>(insert_key->AccessForceNotNull(0)) = i;
-//         if (unique_index_->InsertUnique(common::ManagedPointer(insert_txn), *insert_key, tuple_slot)) {
-//           txn_manager_->Commit(insert_txn, transaction::TransactionUtil::EmptyCallback, nullptr);
-//         } else {
-//           txn_manager_->Abort(insert_txn);
-//         }
-//       }
+        *reinterpret_cast<int32_t *>(insert_key->AccessForceNotNull(0)) = i;
+        if (unique_index_->InsertUnique(common::ManagedPointer(insert_txn), *insert_key, tuple_slot)) {
+          txn_manager_->Commit(insert_txn, transaction::TransactionUtil::EmptyCallback, nullptr);
+        } else {
+          txn_manager_->Abort(insert_txn);
+        }
+      }
 
-//     } else {
-//       for (uint32_t i = num_inserts - 1; i < num_inserts; i--) {
-//         auto *const insert_txn = txn_manager_->BeginTransaction();
-//         auto *const insert_redo =
-//             insert_txn->StageWrite(CatalogTestUtil::TEST_DB_OID, CatalogTestUtil::TEST_TABLE_OID, tuple_initializer_);
-//         auto *const insert_tuple = insert_redo->Delta();
-//         *reinterpret_cast<int32_t *>(insert_tuple->AccessForceNotNull(0)) = i;
-//         const auto tuple_slot = sql_table_->Insert(common::ManagedPointer(insert_txn), insert_redo);
+    } else {
+      for (uint32_t i = num_inserts - 1; i < num_inserts; i--) {
+        auto *const insert_txn = txn_manager_->BeginTransaction();
+        auto *const insert_redo =
+            insert_txn->StageWrite(CatalogTestUtil::TEST_DB_OID, CatalogTestUtil::TEST_TABLE_OID, tuple_initializer_);
+        auto *const insert_tuple = insert_redo->Delta();
+        *reinterpret_cast<int32_t *>(insert_tuple->AccessForceNotNull(0)) = i;
+        const auto tuple_slot = sql_table_->Insert(common::ManagedPointer(insert_txn), insert_redo);
 
-//         *reinterpret_cast<int32_t *>(insert_key->AccessForceNotNull(0)) = i;
-//         if (unique_index_->InsertUnique(common::ManagedPointer(insert_txn), *insert_key, tuple_slot)) {
-//           txn_manager_->Commit(insert_txn, transaction::TransactionUtil::EmptyCallback, nullptr);
-//         } else {
-//           txn_manager_->Abort(insert_txn);
-//         }
-//       }
-//     }
-//     delete[] key_buffer;
-//   };
+        *reinterpret_cast<int32_t *>(insert_key->AccessForceNotNull(0)) = i;
+        if (unique_index_->InsertUnique(common::ManagedPointer(insert_txn), *insert_key, tuple_slot)) {
+          txn_manager_->Commit(insert_txn, transaction::TransactionUtil::EmptyCallback, nullptr);
+        } else {
+          txn_manager_->Abort(insert_txn);
+        }
+      }
+    }
+    delete[] key_buffer;
+  };
 
-//   // run the workload
-//   for (uint32_t i = 0; i < num_threads_; i++) {
-//     thread_pool_.SubmitTask([i, &workload] { workload(i); });
-//   }
-//   thread_pool_.WaitUntilAllFinished();
+  // run the workload
+  for (uint32_t i = 0; i < num_threads_; i++) {
+    thread_pool_.SubmitTask([i, &workload] { workload(i); });
+  }
+  thread_pool_.WaitUntilAllFinished();
 
-//   // scan the results
-//   auto *const scan_txn = txn_manager_->BeginTransaction();
+  // scan the results
+  auto *const scan_txn = txn_manager_->BeginTransaction();
 
-//   std::vector<storage::TupleSlot> results;
+  std::vector<storage::TupleSlot> results;
 
-//   auto *const scan_key_pr = unique_index_->GetProjectedRowInitializer().InitializeRow(key_buffer_1_);
+  auto *const scan_key_pr = unique_index_->GetProjectedRowInitializer().InitializeRow(key_buffer_1_);
 
-//   for (uint32_t i = 0; i < num_inserts; i++) {
-//     *reinterpret_cast<int32_t *>(scan_key_pr->AccessForceNotNull(0)) = i;
-//     unique_index_->ScanKey(*scan_txn, *scan_key_pr, &results);
-//     EXPECT_EQ(results.size(), 1);
-//     results.clear();
-//   }
+  for (uint32_t i = 0; i < num_inserts; i++) {
+    *reinterpret_cast<int32_t *>(scan_key_pr->AccessForceNotNull(0)) = i;
+    unique_index_->ScanKey(*scan_txn, *scan_key_pr, &results);
+    EXPECT_EQ(results.size(), 1);
+    results.clear();
+  }
 
-//   txn_manager_->Commit(scan_txn, transaction::TransactionUtil::EmptyCallback, nullptr);
+  txn_manager_->Commit(scan_txn, transaction::TransactionUtil::EmptyCallback, nullptr);
 
-//   EXPECT_GT(unique_index_->GetHeapUsage(), 0);
-// }
+  EXPECT_GT(unique_index_->GetHeapUsage(), 0);
+}
 
 /**
  * This test creates multiple worker threads that all try to insert [0,num_inserts) as tuples in the table and into the

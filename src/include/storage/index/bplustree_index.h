@@ -42,7 +42,7 @@ class BPlusTreeIndex final : public Index {
 
   size_t GetHeapUsage() const final {
     // FIXME(15-721 project2): access the underlying data structure and report the heap usage
-    return 0;
+    return bplustree_->GetHeapUsage();
   }
 
   bool Insert(const common::ManagedPointer<transaction::TransactionContext> txn, const ProjectedRow &tuple,
@@ -80,9 +80,9 @@ class BPlusTreeIndex final : public Index {
     };
     bool pred = true;
     std::vector<TupleSlot> value_list;
-    bplustree_->GetValue(index_key, value_list);
+    bplustree_->GetValue(index_key, &value_list);
     for (TupleSlot &val : value_list) {
-      if (predicate(val) == true) {
+      if (predicate(val)) {
         predicate_satisfied = true;
         pred = false;
         break;
@@ -91,7 +91,7 @@ class BPlusTreeIndex final : public Index {
     // FIXME(15-721 project2): perform a non-unique CONDITIONAL insert into the underlying data structure of the
     // key/value pair
     // if value already exists, insertion fails
-    bool result = false;
+    bool result;
     if (pred) {
       result = bplustree_->InsertUnique(index_key, location);
     } else {
@@ -146,13 +146,14 @@ class BPlusTreeIndex final : public Index {
 
     // Perform lookup in BPlusTree
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-    bplustree_->GetValue(index_key, results);
+    bplustree_->GetValue(index_key, &results);
     // Avoid resizing our value_list, even if it means over-provisioning
     value_list->reserve(results.size());
 
     // Perform visibility check on result
     for (const auto &result : results) {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
+      if (metadata_.GetSchema().Unique()) break;
     }
 
     TERRIER_ASSERT(!(metadata_.GetSchema().Unique()) || (metadata_.GetSchema().Unique() && value_list->size() <= 1),
@@ -177,7 +178,7 @@ class BPlusTreeIndex final : public Index {
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
     std::vector<TupleSlot> results;
-    bplustree_->GetValueDescending(index_low_key, index_high_key, results);
+    bplustree_->GetValueDescending(index_low_key, index_high_key, &results);
     value_list->reserve(results.size());
     for (auto i = results.rbegin(); i != results.rend(); ++i) {
       if (IsVisible(txn, *i)) value_list->emplace_back(*i);
@@ -195,7 +196,7 @@ class BPlusTreeIndex final : public Index {
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
     std::vector<TupleSlot> results;
-    bplustree_->GetValueDescending(index_low_key, index_high_key, results);
+    bplustree_->GetValueDescending(index_low_key, index_high_key, &results);
     value_list->reserve(results.size());
     for (const auto &result : results) {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
@@ -215,7 +216,7 @@ class BPlusTreeIndex final : public Index {
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
     std::vector<TupleSlot> results;
-    bplustree_->GetValueDescendingLimited(index_low_key, index_high_key, results, limit);
+    bplustree_->GetValueDescendingLimited(index_low_key, index_high_key, &results, limit);
     value_list->reserve(results.size());
     for (const auto &result : results) {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
