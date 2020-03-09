@@ -12,6 +12,7 @@ class BPlusTree {
  public:
   class BaseOp {
    public:
+    BaseOp() = default;
     // Key comparator
     const KeyComparator key_cmp_obj_;
     // Raw key eq checker
@@ -118,7 +119,7 @@ class BPlusTree {
     TreeNode *parent_;
     TreeNode *left_sibling_;
     TreeNode *right_sibling_;  // only leaf node has siblings
-    explicit TreeNode(TreeNode *parent, InnerList *value_list = nullptr) {
+    explicit TreeNode(TreeNode *parent, InnerList *value_list = nullptr) : BaseOp() {
       value_list_ = value_list;
       parent_ = parent;
       left_sibling_ = nullptr;
