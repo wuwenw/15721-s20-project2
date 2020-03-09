@@ -159,7 +159,7 @@ class BPlusTree {
     TreeNode *Insert(KeyType key, ValueType val, bool allow_dup = true) {
       TreeNode *result = nullptr;
       if (IsLeaf()) {
-        InnerList *new_value = new InnerList(key, val);
+        auto new_value = new InnerList(key, val);
         result = InsertAtLeafNode(new_value, allow_dup);
         if (result == nullptr) delete new_value;
       } else {
@@ -211,10 +211,10 @@ class BPlusTree {
     TreeNode *GetNodeRecursive(TreeNode *node, KeyType index_key) {
       if (IsLeaf()) {
         return node;
-      } else {
-        TreeNode *child_node = FindBestFitChild(index_key);
-        return child_node->GetNodeRecursive(child_node, index_key);
       }
+      TreeNode *child_node = FindBestFitChild(index_key);
+      return child_node->GetNodeRecursive(child_node, index_key);
+
     }
 
     // assume the node exceeds capacity
@@ -230,7 +230,7 @@ class BPlusTree {
         cur_index++;
       }
       // create a new TreeNode that has the same parent
-      TreeNode *right_tree_node = new TreeNode(node->parent_);
+      auto right_tree_node = new TreeNode(node->parent_);
       TreeNode *left_tree_node = node;
       // if (right_tree_node == nullptr) return nullptr;
       result.parent = left_tree_node->parent_;
@@ -248,7 +248,7 @@ class BPlusTree {
       }
 
       if (node->IsLeaf()) {
-        InnerList *split_value = new InnerList(split_list->key_, split_list->value_);
+        auto split_value = new InnerList(split_list->key_, split_list->value_);
         // if (split_value == nullptr) return nullptr;
         // configure value list, break the linkedlist into two
         right_tree_node->value_list_ = split_list;
@@ -360,9 +360,7 @@ class BPlusTree {
         }
         next_val = cur_val->next_;
         ++ptr_iter;
-        if (next_val == nullptr)
-          return *ptr_iter;
-        else if (next_val->KeyCmpGreater(next_val->key_, key))
+        if (next_val == nullptr || next_val->KeyCmpGreater(next_val->key_, key))
           return *ptr_iter;
         cur_val = next_val;
       }
