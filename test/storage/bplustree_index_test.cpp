@@ -163,22 +163,22 @@ TEST_F(BPlusTreeIndexTests, UniqueInsert) {
   thread_pool_.WaitUntilAllFinished();
 
 //   scan the results
-   auto *const scan_txn = txn_manager_->BeginTransaction();
+  auto *const scan_txn = txn_manager_->BeginTransaction();
 
-   std::vector<storage::TupleSlot> results;
+  std::vector<storage::TupleSlot> results;
 
-   auto *const scan_key_pr = unique_index_->GetProjectedRowInitializer().InitializeRow(key_buffer_1_);
+  auto *const scan_key_pr = unique_index_->GetProjectedRowInitializer().InitializeRow(key_buffer_1_);
 
-   for (uint32_t i = 0; i < num_inserts; i++) {
-   *reinterpret_cast<int32_t *>(scan_key_pr->AccessForceNotNull(0)) = i;
-   unique_index_->ScanKey(*scan_txn, *scan_key_pr, &results);
-   EXPECT_EQ(results.size(), 1);
-   results.clear();
+  for (uint32_t i = 0; i < num_inserts; i++) {
+    *reinterpret_cast<int32_t *>(scan_key_pr->AccessForceNotNull(0)) = i;
+    unique_index_->ScanKey(*scan_txn, *scan_key_pr, &results);
+    EXPECT_EQ(results.size(), 1);
+    results.clear();
   }
 
-   txn_manager_->Commit(scan_txn, transaction::TransactionUtil::EmptyCallback, nullptr);
+  txn_manager_->Commit(scan_txn, transaction::TransactionUtil::EmptyCallback, nullptr);
 
-   EXPECT_GT(unique_index_->GetHeapUsage(), 0);
+  EXPECT_GT(unique_index_->GetHeapUsage(), 0);
 }
 
 /**

@@ -13,21 +13,21 @@ class BPlusTree {
   class BaseOp {
    public:
     // Key comparator
-    const KeyComparator key_cmp_obj;
+    const KeyComparator key_cmp_obj_;
     // Raw key eq checker
-    const KeyEqualityChecker key_eq_obj;
+    const KeyEqualityChecker key_eq_obj_;
     // Raw key hasher
-    const KeyHashFunc key_hash_obj;
+    const KeyHashFunc key_hash_obj_;
     // Check whether values are equivalent
-    const ValueEqualityChecker value_eq_obj;
+    const ValueEqualityChecker value_eq_obj_;
 
-    bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const { return key_cmp_obj(key1, key2); }
-    bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj(key1, key2); }
+    bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const { return key_cmp_obj_(key1, key2); }
+    bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj_(key1, key2); }
     bool KeyCmpGreaterEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpLess(key1, key2); }
     bool KeyCmpGreater(const KeyType &key1, const KeyType &key2) const { return KeyCmpLess(key2, key1); }
     bool KeyCmpLessEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpGreater(key1, key2); }
-    size_t KeyHash(const KeyType &key) const { return key_hash_obj(key); }
-    bool ValueCmpEqual(const ValueType &val1, const ValueType &val2) const { return value_eq_obj(val1, val2); }
+    size_t KeyHash(const KeyType &key) const { return key_hash_obj_(key); }
+    bool ValueCmpEqual(const ValueType &val1, const ValueType &val2) const { return value_eq_obj_(val1, val2); }
   };
   class InnerList : public BaseOp {
    public:
