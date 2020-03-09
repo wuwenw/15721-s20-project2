@@ -37,7 +37,7 @@ class BPlusTree {
     InnerList *next_;
     std::vector<ValueType> same_key_values_;
     // standard constructor using key and value
-    InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) : BaseOp() {
+    InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) {
       key_ = key;
       value_ = val;
       prev_ = prev;
@@ -46,7 +46,7 @@ class BPlusTree {
       same_key_values_.push_back(val);
     }
     // copy constructor to construct a InnerList from reference
-    explicit InnerList(InnerList *reference) : BaseOp() {
+    explicit InnerList(InnerList *reference) {
       key_ = reference->key_;
       value_ = reference->value_;
       prev_ = nullptr;
@@ -103,7 +103,7 @@ class BPlusTree {
     TreeNode *parent_;
     TreeNode *left_sibling_;
     TreeNode *right_sibling_;  // only leaf node has siblings
-    explicit TreeNode(TreeNode *parent, InnerList *value_list = nullptr) : BaseOp() {
+    explicit TreeNode(TreeNode *parent, InnerList *value_list = nullptr) {
       value_list_ = value_list;
       parent_ = parent;
       left_sibling_ = nullptr;
