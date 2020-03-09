@@ -1,4 +1,5 @@
 #include <vector>
+#include <queue>
 #include "storage/index/index.h"
 
 namespace terrier::storage::index {
