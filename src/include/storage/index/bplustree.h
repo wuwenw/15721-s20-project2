@@ -118,7 +118,7 @@ class BPlusTree {
     TreeNode *parent_;
     TreeNode *left_sibling_;
     TreeNode *right_sibling_;  // only leaf node has siblings
-    explicit TreeNode(TreeNode *parent, InnerList *value_list = nullptr) : BaseOp() {
+    explicit TreeNode(TreeNode *parent, InnerList *value_list = nullptr) {
       value_list_ = value_list;
       parent_ = parent;
       left_sibling_ = nullptr;
@@ -183,7 +183,7 @@ class BPlusTree {
       restore_stack.push_back(split_value_list);
       // base case: root is split, create a new root and return it
       if (cur_node == nullptr) {
-        TreeNode *new_root = new TreeNode(nullptr);
+        auto *new_root = new TreeNode(nullptr);
 
         new_root->ConfigureNewSplitNode(split_value_list, left_child, right_child, parent_index);
         return new_root;
@@ -318,33 +318,30 @@ class BPlusTree {
           if (allow_dup || (!cur->ContainDupValue(val))) {
             cur->InsertDup(new_list);
             return this;
-          } else {
-            return nullptr;
           }
-        } else {
-          // else, find best fit point to insert a new node
-          next = cur->next_;
-          // case should advance
-          if (next != nullptr && this->KeyCmpLessEqual(next->key_, key)) {
-            cur = cur->next_;
-            continue;
-          } else {
-            // if should insert at the front
-            if (cur->KeyCmpGreater(cur->key_, key)) {
-              cur->InsertFront(new_list);
-              if (cur == value_list_) {
-                value_list_ = new_list;
-              }
-              size++;
-              break;
-            } else {
-              // if place between cur and next
-              cur->InsertBack(new_list);
-              size++;
-              break;
-            }
-          }
+          return nullptr;
         }
+        // else, find best fit point to insert a new node
+        next = cur->next_;
+        // case should advance
+        if (next != nullptr && this->KeyCmpLessEqual(next->key_, key)) {
+          cur = cur->next_;
+          continue;
+        }
+        // if should insert at the front
+        if (cur->KeyCmpGreater(cur->key_, key)) {
+          cur->InsertFront(new_list);
+          if (cur == value_list_) {
+            value_list_ = new_list;
+          }
+          size++;
+          break;
+        }
+        // if place between cur and next
+        cur->InsertBack(new_list);
+        size++;
+        break;
+
       }
       return this;
     }
@@ -367,8 +364,7 @@ class BPlusTree {
           return *ptr_iter;
         else if (next_val->KeyCmpGreater(next_val->key_, key))
           return *ptr_iter;
-        else
-          cur_val = next_val;
+        cur_val = next_val;
       }
       return *ptr_iter;
     }
