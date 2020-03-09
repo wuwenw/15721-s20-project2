@@ -633,7 +633,6 @@ class BPlusTree {
     while (!q.empty()) {
         TreeNode *curr = q.pop();
         total_usage += GetNodeHeapUsage(curr);
-
         for (int i = 0; i < curr->ptr_list.size(); i++)
             q.push(curr->ptr_list[i]);
     }

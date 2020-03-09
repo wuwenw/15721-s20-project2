@@ -424,5 +424,52 @@ TEST_F(BPlusTreeTests, EmptyTreeGetHeapUsage) {
           new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
   tree->root = nullptr;
   EXPECT_EQ(tree->GetHeapUsage(), 0);
+  delete tree;
 }
 
+
+TEST_F(BPlusTreeTests, NonEmptyTreesGetHeapUsage) {
+// This defines the key space (0 ~ (1M - 1))
+ const uint32_t key_num = 1;
+ terrier::storage::index::BPlusTree<int64_t, int64_t> *tree =
+         new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);
+
+ std::vector<int64_t> keys;
+ keys.reserve(key_num);
+
+ for (int64_t i = 0; i < key_num; i++) {
+    keys.emplace_back(i);
+ }
+ /*
+    0
+ */
+ tree->Insert(0, 0);
+ EXPECT_GT(tree->GetHeapUsage(), 40);
+
+ /*
+   0,1
+ */
+ tree->Insert(1, 1);
+ EXPECT_GT(tree->GetHeapUsage(), 80);
+
+ /*
+    1
+    0   1,2
+ */
+ tree->Insert(2, 2);
+ EXPECT_GT(tree->GetHeapUsage(), 120);
+ /*
+   1   2
+ 0   1   2,3
+ */
+ tree->Insert(3, 3);
+ EXPECT_GT(tree->GetHeapUsage(), 200);
+
+ /*
+            2
+        1       3
+    0   1   2   3,4
+ */
+ EXPECT_GT(tree->GetHeapUsage(), 320);
+ delete tree;
+}
