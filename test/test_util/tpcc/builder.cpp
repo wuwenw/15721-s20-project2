@@ -300,8 +300,8 @@ Database *Builder::Build(const storage::index::IndexType index_type) {
     TERRIER_ASSERT(stock_index->KeyKind() == storage::index::IndexKeyKind::HASHKEY,
                    "Constructed the wrong index key type.");
   } else {
-    TERRIER_ASSERT(index_type == storage::index::IndexType::BWTREE,
-                   "This branch expects the BwTree. Did you add another IndexType to the system?");
+//    TERRIER_ASSERT(index_type == storage::index::IndexType::BWTREE,
+//                   "This branch expects the BwTree. Did you add another IndexType to the system?");
     TERRIER_ASSERT(warehouse_index->Type() == storage::index::IndexType::BWTREE, "Constructed the wrong index type.");
     TERRIER_ASSERT(district_index->Type() == storage::index::IndexType::BWTREE, "Constructed the wrong index type.");
     TERRIER_ASSERT(customer_index->Type() == storage::index::IndexType::BWTREE, "Constructed the wrong index type.");
