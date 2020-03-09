@@ -583,6 +583,7 @@ class BPlusTree {
     return true;
   }
   void GetValue(KeyType index_key, std::vector<ValueType> &results) {
+    common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *target_node = root->GetNodeRecursive(root, index_key);
     auto *cur = target_node->value_list_;
     while (cur != nullptr) {
@@ -595,6 +596,7 @@ class BPlusTree {
   }
 
   void GetValueDescending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> &results) {
+    common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *cur_node = root->GetNodeRecursive(root, index_high_key);
     while (cur_node != nullptr) {
       auto cur = cur_node->value_list_;
@@ -612,6 +614,7 @@ class BPlusTree {
 
   void GetValueDescendingLimited(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> &results,
                                  uint32_t limit) {
+    common::SpinLatch::ScopedSpinLatch guard(&latch_);
     if (limit == 0) return;
     uint32_t count = 0;
     TreeNode *cur_node = root->GetNodeRecursive(root, index_high_key);
