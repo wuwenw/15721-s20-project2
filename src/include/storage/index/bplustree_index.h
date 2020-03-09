@@ -153,6 +153,7 @@ class BPlusTreeIndex final : public Index {
     // Perform visibility check on result
     for (const auto &result : results) {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
+      if (metadata_.GetSchema().Unique()) break;
     }
 
     TERRIER_ASSERT(!(metadata_.GetSchema().Unique()) || (metadata_.GetSchema().Unique() && value_list->size() <= 1),
