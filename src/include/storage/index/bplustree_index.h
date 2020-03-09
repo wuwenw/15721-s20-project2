@@ -78,11 +78,25 @@ class BPlusTreeIndex final : public Index {
       const auto is_visible = data_table->IsVisible(*txn, slot);
       return has_conflict || is_visible;
     };
-
+    bool pred = true;
+    std::vector<TupleSlot> value_list;
+    bplustree_->GetValue(index_key, value_list);
+    for (TupleSlot &val : value_list) {
+      if (predicate(val) == true) {
+        predicate_satisfied = true;
+        pred = false;
+        break;
+      }
+    }
     // FIXME(15-721 project2): perform a non-unique CONDITIONAL insert into the underlying data structure of the
     // key/value pair
     // if value already exists, insertion fails
-    const bool result = bplustree_->InsertUnique(index_key, location);
+    bool result = false;
+    if (pred) {
+      result = bplustree_->InsertUnique(index_key, location);
+    } else {
+      result = false;
+    }
 
     TERRIER_ASSERT(predicate_satisfied != result, "If predicate is not satisfied then insertion should succeed.");
 
