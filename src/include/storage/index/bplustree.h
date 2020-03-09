@@ -1,5 +1,5 @@
-#include <vector>
 #include <queue>
+#include <vector>
 #include "storage/index/index.h"
 
 namespace terrier::storage::index {
@@ -479,9 +479,7 @@ class BPlusTree {
     root = new_root;
     return true;
   }
-  bool InsertUnique(KeyType key, ValueType value) {
-    return Insert(key, value, false);
-  }
+  bool InsertUnique(KeyType key, ValueType value) { return Insert(key, value, false); }
   bool Delete(KeyType key, ValueType value) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
     return true;
@@ -540,24 +538,21 @@ class BPlusTree {
 
   size_t GetHeapUsage() const {
     size_t total_usage = 0;
-    if (root == nullptr)
-      return 0;
-    std::queue <TreeNode *> q;
+    if (root == nullptr) return 0;
+    std::queue<TreeNode *> q;
     q.push(root);
     while (!q.empty()) {
       TreeNode *curr = q.front();
       q.pop();
       total_usage += GetNodeHeapUsage(curr);
-      for (size_t i = 0; i < curr->ptr_list_.size(); i++)
-        q.push(curr->ptr_list_[i]);
+      for (size_t i = 0; i < curr->ptr_list_.size(); i++) q.push(curr->ptr_list_[i]);
     }
     return total_usage;
   }
 
   size_t GetNodeHeapUsage(TreeNode *node) const {
     size_t count = 0;
-    if (node == nullptr)
-      return 0;
+    if (node == nullptr) return 0;
     // count heap usage for current node
     // TreeNode heap usage:
     //        size_t size;
@@ -577,8 +572,7 @@ class BPlusTree {
       //            InnerList *prev_;
       //            InnerList *next_;
       //            std::vector<ValueType> *same_key_values_;
-      count +=
-          sizeof(KeyType) + sizeof(ValueType) * (1 + curr->same_key_values_.size()) + sizeof(InnerList *) * 2;
+      count += sizeof(KeyType) + sizeof(ValueType) * (1 + curr->same_key_values_.size()) + sizeof(InnerList *) * 2;
       curr = curr->next_;
     }
     return count;

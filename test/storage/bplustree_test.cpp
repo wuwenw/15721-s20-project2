@@ -360,7 +360,6 @@ TEST_F(BPlusTreeTests, ComplexRandomInsert) {
   EXPECT_EQ(tree->InsertUnique(25, 25), false);
   EXPECT_EQ(tree->InsertUnique(31, 31), false);
 
-
   // PrintTree(tree);
   delete tree;
 }
