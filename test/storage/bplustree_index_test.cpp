@@ -170,7 +170,7 @@ TEST_F(BPlusTreeIndexTests, UniqueInsert) {
   // auto *const scan_key_pr = unique_index_->GetProjectedRowInitializer().InitializeRow(key_buffer_1_);
   //
   // for (uint32_t i = 0; i < num_inserts; i++) {
-  //*reinterpret_cast<int32_t *>(scan_key_pr->AccessForceNotNull(0)) = i;
+  // *reinterpret_cast<int32_t *>(scan_key_pr->AccessForceNotNull(0)) = i;
   // unique_index_->ScanKey(*scan_txn, *scan_key_pr, &results);
   // EXPECT_EQ(results.size(), 1);
   // results.clear();
