@@ -162,7 +162,7 @@ TEST_F(BPlusTreeIndexTests, UniqueInsert) {
   }
   thread_pool_.WaitUntilAllFinished();
 
-   scan the results
+//   scan the results
    auto *const scan_txn = txn_manager_->BeginTransaction();
 
    std::vector<storage::TupleSlot> results;
