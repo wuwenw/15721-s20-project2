@@ -94,6 +94,27 @@ class BPlusTree {
       }
       return false;
     }
+    // remove all value frm current innerList
+    // return false if current innerlist does not have this value
+    InnerList *RemoveValue(ValueType value) {
+      InnerList *res = nullptr;
+      std::vector<ValueType>::iterator iter = same_key_values_.end();
+      --iter;
+      while (iter != same_key_values_.begin()) {
+        if (*iter == value) {
+          same_key_values_.erase(iter);
+          res = this;
+        }
+        --iter;
+      }
+      if (*iter == value) {
+        same_key_values.erase(iter);
+        res = this;
+      }
+      return res;
+    }
+
+    bool IsEmpty() { return same_key_values_.size() == 0; }
   };  // end class InnerList
   class TreeNode : public BaseOp {
    public:
@@ -154,7 +175,6 @@ class BPlusTree {
       return result;
     }
 
-    TreeNode *Delete(KeyType key, ValueType value) { return nullptr; }
     TreeNode *SplitWrapper(TreeNode *cur_node, TreeNode *root_node, size_t order) {
       std::vector<InnerList *> restore_stack;
       return Split(cur_node, root_node, order, restore_stack);
@@ -193,12 +213,12 @@ class BPlusTree {
                    split_res.right_child_, split_res.parent_index_);
     }
 
-    TreeNode *GetNodeRecursive(TreeNode *node, KeyType index_key) {
+    TreeNode *GetNodeRecursive(KeyType index_key) {
       if (IsLeaf()) {
         return node;
       }
       TreeNode *child_node = FindBestFitChild(index_key);
-      return child_node->GetNodeRecursive(child_node, index_key);
+      return child_node->GetNodeRecursive(index_key);
     }
 
     // assume the node exceeds capacity
@@ -272,6 +292,88 @@ class BPlusTree {
         result.split_value_ = split_list;
       }
       return result;
+    }
+    // remove a key value pair from leaf
+    // return nullptr if current value or key does not exist in leaf
+    TreeNode *DeleteValueFromLeaf(KeyType key, ValueType value) {
+      // find the proper value list
+      TERRIER_ASSERT(this->IsLeaf(), "DeleteValueFromLeaf should be called from leaf node");
+      InnerList *cur_value = value_list_;
+      while (cur_value ! + nullptr && cur_value->key_ != key) {
+        cur_value = cur_value->next_;
+      }
+      if (cur_value == nullptr) return nullptr;
+      InnerList *remove_res = cur_value->RemoveValue(value);
+      // fail to delete any
+      if (remove_res == nullptr) return nullptr;
+      // check if the innerlist needs to be remove
+      if (remove_res->IsEmpty()) {
+        if (remove_res == value_list_) {
+          value_list_ = value_list->next_;
+          if (value_list_ != nullptr) value_list_->prev_ = nullptr;
+        } else {
+          remove_res->prev_->next_ = remove_res->next_;
+          remove_res->next_->prev_ = remove_res->prev_;
+        }
+        delete remove_res;
+      }
+      return this;
+    }
+
+    bool CurNodeValid(TreeNode *cur_node) { return cur_node->value_list_ != nullptr; }
+
+    TreeNode *MergeFromLeaf(TreeNode *leaf_node, TreeNode *root, KeyType key) {
+      // check if leaf id empty after deletion, if yes then needs to merge
+      if (CurNodeValid(leaf_node)) return root;
+      TreeNode *parent, *cur_node, *left_child, *right_child, *merged_node;
+      InnerList *separation_value;
+      size_t separation_index = 1;  // index of right hand side
+      cur_node = leaf_node;
+      while (!CurNodeValid(cur_node)) {
+        if (cur_node == root) {
+          TERRIER_ASSERT(root->size_ == 0 && root->ptr_list_.size() == 1,
+                         "if roots needs to tear down to child, its ptr side should be 1");
+          merged_node = root;
+          root = root->ptr_list_[0];
+          delete merged_node;
+
+        } else {
+          // find parent
+          parent = cur_node->parent_;
+          // find its left child ,if not find its right child
+          // find parent's value that separatesthe two children
+          // find parent's curresponding pointers two the two children
+          if (cur_node == parent->ptr_list_[0]) {
+            left_child = cur_node;
+            right_child = ptr_list[1];
+            separation_value = parent->value_list_;
+          } else {
+            separation_value = parent->value_list_;
+            while (parent->ptr_list_[separation_index] != cur_node) {
+              separation_value = separation_value->next_;
+              separation_index++;
+            }
+            TERRIER_ASSERT(separation_index <= parent->size_, "Finding separation index goes beyond parent size");
+            left_child = parent->ptr_list_[separation_index - 1];
+            right_child = cur_node
+          }
+          // merge the two children as a new one
+          Merge(left_child, right_child);
+          merged_node = left_child;
+          // delete the separation value in parent set to point to new children
+          parent->ptr_list_.erase(parent->ptr_list_.begin() + separation_index);
+          if (separation_value == parent->value_list_) {
+            parent->value_list_ = parent->value_list_->next_;
+            if (parent->value_list_ != nullptr) parent->value_list_->prev_ = nullptr;
+          } else {
+            separation_value->prev_->next_ = separation_value->next_;
+            if (separation_value->next_ != nullptr) separation_value->next_->prev_ = separation_value->prev_;
+          }
+          delete separation_value;
+          cur_node = parent;
+        }
+      }
+      return root;
     }
 
    private:
@@ -445,13 +547,18 @@ class BPlusTree {
     return true;
   }
   bool InsertUnique(KeyType key, ValueType value) { return Insert(key, value, false); }
-  bool Delete(KeyType key, ValueType value) {
+
+  void Delete(KeyType key, ValueType value) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
+    TreeNode *leaf_node = root_->GetNodeRecursive(key);
+    leaf_node->DeleteValueFromLeaf(key, value);
+    TreeNode *new_root = MergeFromLeaf(leaf_node, key);
+    root_ = new_root;
     return true;
   }
   void GetValue(KeyType index_key, std::vector<ValueType> *results) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
-    TreeNode *target_node = root_->GetNodeRecursive(root_, index_key);
+    TreeNode *target_node = root_->GetNodeRecursive(index_key);
     auto *cur = target_node->value_list_;
     while (cur != nullptr) {
       if (cur->KeyCmpEqual(index_key, cur->key_)) {
@@ -464,7 +571,7 @@ class BPlusTree {
 
   void GetValueDescending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
-    TreeNode *cur_node = root_->GetNodeRecursive(root_, index_high_key);
+    TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
     while (cur_node != nullptr) {
       auto cur = cur_node->value_list_;
       while (cur != nullptr) {
@@ -484,7 +591,7 @@ class BPlusTree {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
     if (limit == 0) return;
     uint32_t count = 0;
-    TreeNode *cur_node = root_->GetNodeRecursive(root_, index_high_key);
+    TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
     while (cur_node != nullptr) {
       auto cur = cur_node->value_list_;
       while (cur != nullptr) {
