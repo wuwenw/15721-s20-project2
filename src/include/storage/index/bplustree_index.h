@@ -59,6 +59,7 @@ class BPlusTreeIndex final : public Index {
     // Register an abort action with the txn context in case of rollback
     txn->RegisterAbortAction([=]() {
       const bool UNUSED_ATTRIBUTE result = bplustree_->Delete(index_key, location);
+      // bplustree_->Delete(index_key, location);
       TERRIER_ASSERT(result, "Delete on the index failed.");
     });
     return result;
@@ -104,6 +105,7 @@ class BPlusTreeIndex final : public Index {
       // Register an abort action with the txn context in case of rollback
       txn->RegisterAbortAction([=]() {
         const bool UNUSED_ATTRIBUTE result = bplustree_->Delete(index_key, location);
+        // bplustree_->Delete(index_key, location);
         TERRIER_ASSERT(result, "Delete on the index failed.");
       });
     } else {

@@ -98,7 +98,7 @@ class BPlusTree {
     // return false if current innerlist does not have this value
     InnerList *RemoveValue(ValueType value) {
       InnerList *res = nullptr;
-      std::vector<ValueType>::iterator iter = same_key_values_.end();
+      auto iter = same_key_values_.end();
       --iter;
       while (iter != same_key_values_.begin()) {
         if (*iter == value) {
@@ -108,7 +108,7 @@ class BPlusTree {
         --iter;
       }
       if (*iter == value) {
-        same_key_values.erase(iter);
+        same_key_values_.erase(iter);
         res = this;
       }
       return res;
@@ -215,7 +215,7 @@ class BPlusTree {
 
     TreeNode *GetNodeRecursive(KeyType index_key) {
       if (IsLeaf()) {
-        return node;
+        return this;
       }
       TreeNode *child_node = FindBestFitChild(index_key);
       return child_node->GetNodeRecursive(index_key);
@@ -299,7 +299,7 @@ class BPlusTree {
       // find the proper value list
       TERRIER_ASSERT(this->IsLeaf(), "DeleteValueFromLeaf should be called from leaf node");
       InnerList *cur_value = value_list_;
-      while (cur_value ! + nullptr && cur_value->key_ != key) {
+      while (cur_value != nullptr && (!(cur_value->KeyCmpEqual(cur_value->key_, key)))) {
         cur_value = cur_value->next_;
       }
       if (cur_value == nullptr) return nullptr;
@@ -309,7 +309,7 @@ class BPlusTree {
       // check if the innerlist needs to be remove
       if (remove_res->IsEmpty()) {
         if (remove_res == value_list_) {
-          value_list_ = value_list->next_;
+          value_list_ = value_list_->next_;
           if (value_list_ != nullptr) value_list_->prev_ = nullptr;
         } else {
           remove_res->prev_->next_ = remove_res->next_;
@@ -322,7 +322,9 @@ class BPlusTree {
 
     bool CurNodeValid(TreeNode *cur_node) { return cur_node->value_list_ != nullptr; }
 
-    TreeNode *MergeFromLeaf(TreeNode *leaf_node, TreeNode *root, KeyType key) {
+    // called from root
+    TreeNode *MergeFromLeaf(TreeNode *leaf_node, KeyType key) {
+      TreeNode *root = this;
       // check if leaf id empty after deletion, if yes then needs to merge
       if (CurNodeValid(leaf_node)) return root;
       TreeNode *parent, *cur_node, *left_child, *right_child, *merged_node;
@@ -345,7 +347,7 @@ class BPlusTree {
           // find parent's curresponding pointers two the two children
           if (cur_node == parent->ptr_list_[0]) {
             left_child = cur_node;
-            right_child = ptr_list[1];
+            right_child = ptr_list_[1];
             separation_value = parent->value_list_;
           } else {
             separation_value = parent->value_list_;
@@ -355,7 +357,7 @@ class BPlusTree {
             }
             TERRIER_ASSERT(separation_index <= parent->size_, "Finding separation index goes beyond parent size");
             left_child = parent->ptr_list_[separation_index - 1];
-            right_child = cur_node
+            right_child = cur_node;
           }
           // merge the two children as a new one
           Merge(left_child, right_child);
@@ -548,11 +550,12 @@ class BPlusTree {
   }
   bool InsertUnique(KeyType key, ValueType value) { return Insert(key, value, false); }
 
-  void Delete(KeyType key, ValueType value) {
+  bool Delete(KeyType key, ValueType value) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *leaf_node = root_->GetNodeRecursive(key);
-    leaf_node->DeleteValueFromLeaf(key, value);
-    TreeNode *new_root = MergeFromLeaf(leaf_node, key);
+    TreeNode *half_result = leaf_node->DeleteValueFromLeaf(key, value);
+    if(half_result == nullptr) return false;
+    TreeNode *new_root = root_->MergeFromLeaf(leaf_node, key);
     root_ = new_root;
     return true;
   }
