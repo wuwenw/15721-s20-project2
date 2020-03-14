@@ -371,6 +371,258 @@ TEST_F(BPlusTreeTests, ManyInsert) {
   delete tree;
 }
 
+TEST_F(BPlusTreeTests, RandomDeletion) {
+  // This defines the key space (0 ~ (1M - 1))
+  const uint32_t key_num = 1;
+  auto tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(4);
+
+  std::vector<int64_t> keys;
+  keys.reserve(key_num);
+
+  for (int64_t i = 0; i < key_num; i++) {
+    keys.emplace_back(i);
+  }
+  // test insertion
+  tree->Insert(12, 12);
+  tree->Insert(36, 36);
+  tree->Insert(9, 9);
+  tree->Insert(10, 10);
+  tree->Insert(7, 7);
+  tree->Insert(15, 15);
+  tree->Insert(81, 81);
+  tree->Insert(72, 72);
+  tree->Insert(78, 78);
+  tree->Insert(25, 25);
+  tree->Insert(31, 31);
+  tree->Insert(0, 0);
+  tree->Insert(2, 2);
+  tree->Insert(34, 34);
+  tree->Insert(65, 65);
+  tree->Insert(105, 105);
+  tree->Insert(97, 97);
+  tree->Insert(26, 26);
+  tree->Insert(16, 16);
+  tree->Insert(19, 19);
+  tree->Insert(80, 80);
+  tree->Insert(3, 3);
+  tree->Insert(67, 67);
+  tree->Insert(71, 71);
+  tree->Insert(178, 178);
+  tree->Insert(164, 164);
+  tree->Insert(145, 145);
+  tree->Insert(157, 157);
+  tree->Insert(162, 162);
+  tree->Insert(135, 135);
+
+  // test insertion result
+  /*
+                                                          31,72
+
+                   3,10,15,19                              36,65                                  81,105,157
+
+  0,2    3,7,9    10,12    15,16   19,25,26       31,34   36,45   65,67,71      72,78,80   81,97   105,135,145   157,162,164,178
+  */
+  // level 1
+  EXPECT_EQ(tree->root_->size_, 2);
+  EXPECT_EQ(tree->root_->value_list_->key_, 31);
+  EXPECT_EQ(tree->root_->value_list_->next_->key_, 72);
+  EXPECT_EQ(tree->root_->ptr_list_.size(), 3);
+  // level 2
+  EXPECT_EQ(tree->root_->ptr_list_[0]->size_, 4);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->value_list_->key_, 3);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->value_list_->next_->key_, 10);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->value_list_->next_->next_->key_, 15);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->value_list_->next_->next_->next_->key_, 19);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_.size(), 5);
+
+  EXPECT_EQ(tree->root_->ptr_list_[1]->size_, 2);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->key_, 36);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->key_, 65);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_.size(), 3);
+
+  EXPECT_EQ(tree->root_->ptr_list_[2]->size_, 3);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 81);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 105);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->next_->key_, 157);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_.size(), 4);
+
+  // level 3
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[0]->size_, 2);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[0]->value_list_->key_, 0);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[0]->value_list_->next_->key_, 2);
+
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[1]->size_, 3);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[1]->value_list_->key_, 3);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[1]->value_list_->next_->key_, 7);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[1]->value_list_->next_->next_->key_, 9);
+
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[2]->size_, 2);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[2]->value_list_->key_, 10);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[2]->value_list_->next_->key_, 12);
+
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[3]->size_, 2);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[3]->value_list_->key_, 15);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[3]->value_list_->next_->key_, 16);
+
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[4]->size_, 3);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[4]->value_list_->key_, 19);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[4]->value_list_->next_->key_, 25);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[4]->value_list_->next_->next_->key_, 26);
+
+
+
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->size_, 2);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->value_list_->key_, 31);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->value_list_->next_->key_, 34);
+
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->size_, 2);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->value_list_->key_, 36);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->value_list_->next_->key_, 45);
+
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->size_, 3);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->key_, 65);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->key_, 67);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->next_->key_, 71);
+
+
+
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->size_, 3);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->value_list_->key_, 72);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->value_list_->next_->key_, 78);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->value_list_->next_->next_->key_, 80);
+
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->size_, 2);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->key_, 81);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->next_->key_, 97);
+
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->size_, 3);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->key_, 105);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->next_->key_, 135);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->next_->next_->key_, 145);
+
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->size_, 4);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->key_, 157);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->next_->key_, 162);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->next_->next_->key_, 164);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->next_->next_->next_->key_, 178);
+
+  // test deletion
+  tree->Delete(105, 105);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->next_->key_, 135);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 135);
+
+  tree->Delete(97, 97);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->key_, 80);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->next_->key_, 81);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 80);
+  tree->Delete(25, 25);
+  tree->Delete(145, 145);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->next_->key_, 162);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->key_, 162);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->next_->key_, 157);
+  
+  tree->Delete(71, 71);
+  tree->Delete(31, 31);
+  /*
+                                                     19,72
+
+                   3,10,15                           34,65                               80,135,162
+
+  0,2    3,7,9    10,12    15,16         19,26    34,36,45   65,67,71      72,78   80,81   135,157     162,164,178
+  */
+ // level 1
+  EXPECT_EQ(tree->root_->value_list_->key_, 19);
+  // level 2
+  EXPECT_EQ(tree->root_->ptr_list_[0]->value_list_->next_->key_, 10);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->value_list_->next_->next_->key_, 15);
+
+  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->key_, 34);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->next_->key_, 65);
+
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 80);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->next_->key_, 135);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->next_->next_->key_, 162);
+  // level 3
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[3]->value_list_->key_, 15);
+  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[3]->value_list_->next_->key_, 16);
+
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->value_list_->key_, 19);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->value_list_->next_->key_, 26);
+
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->value_list_->key_, 34);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->value_list_->next_->key_, 36);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->value_list_->next_->next_->key_, 45);
+
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->key_, 65);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->key_, 67);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->next_->key_, 71);
+
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->value_list_->key_, 72);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->value_list_->next_->key_, 78);
+
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->key_, 80);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->next_->key_, 81);
+
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->key_, 135);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->next_->key_, 157);
+
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->key_, 162);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->next_->key_, 164);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->next_->next_->key_, 178);
+  tree->Delete(80, 80);
+  /*
+                                                     19,72
+
+                   3,10,15                           34,65                           135,162
+
+  0,2    3,7,9    10,12    15,16         19,26    34,36,45   65,67,71      72,78,81   135,157     162,164,178
+  */
+  tree->Delete(135, 135);
+  /*
+                                                     19,72
+
+                   3,10,15                           34,65                           81,162
+
+  0,2    3,7,9    10,12    15,16         19,26    34,36,45   65,67,71      72,78   81,157     162,164,178
+  */
+
+
+  tree->Delete(10, 10);
+  tree->Delete(7, 7);
+  tree->Delete(78, 78);
+  tree->Delete(67, 67);
+  tree->Delete(72, 72);
+  tree->Delete(157, 157);
+  tree->Delete(36, 36);
+  tree->Delete(81, 81);
+  tree->Delete(2, 2);
+  tree->Delete(164, 164);
+  tree->Delete(3, 3);
+  tree->Delete(34, 34);
+  tree->Delete(135, 135);
+  tree->Delete(26, 26);
+  tree->Delete(178, 178);
+  tree->Delete(162, 162);
+  tree->Delete(0, 0);
+  tree->Delete(16, 16);
+  tree->Delete(19, 19);
+  
+  tree->Delete(65, 65);
+  tree->Delete(12, 12);
+  tree->Delete(15, 15);
+  tree->Delete(9, 9);
+  
+
+  EXPECT_EQ(tree->root_->size_, 0);
+  EXPECT_EQ(tree->root_->IsLeaf(), true);
+  EXPECT_EQ(tree->root_->value_list_, nullptr);
+
+
+
+  // PrintTree(tree);
+  delete tree;
+}
+
 TEST_F(BPlusTreeTests, NaiveSequentialScanTest) {
   const uint32_t key_num = 32;
   auto tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(2);

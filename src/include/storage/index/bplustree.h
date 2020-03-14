@@ -101,13 +101,13 @@ class BPlusTree {
       auto iter = same_key_values_.end();
       --iter;
       while (iter != same_key_values_.begin()) {
-        if (*iter == value) {
+        if (this->ValueCmpEqual(*iter, value)) {
           same_key_values_.erase(iter);
           res = this;
         }
         --iter;
       }
-      if (*iter == value) {
+      if (this->ValueCmpEqual(*iter, value)) {
         same_key_values_.erase(iter);
         res = this;
       }
@@ -115,6 +115,16 @@ class BPlusTree {
     }
 
     bool IsEmpty() { return same_key_values_.size() == 0; }
+
+    InnerList *FindListEnd() {
+      InnerList *cur = this;
+      InnerList *next = next_;
+      while (next != nullptr) {
+        cur = next;
+        next = cur->next_;
+      }
+      return cur;
+    }
   };  // end class InnerList
   class TreeNode : public BaseOp {
    public:
@@ -293,89 +303,324 @@ class BPlusTree {
       }
       return result;
     }
-    // remove a key value pair from leaf
-    // return nullptr if current value or key does not exist in leaf
-    TreeNode *DeleteValueFromLeaf(KeyType key, ValueType value) {
+
+    bool NodeValid(size_t order) { return this->size_ >= order / 2; }
+    bool RemoveOneStillValid(size_t order) { return this->size_ - 1 >= order / 2; }
+    KeyType FindSmallestKey() {
+      if (IsLeaf()) return value_list_->key_;
+      return ptr_list_[0]->FindSmallestkey();
+    }
+
+    void RemoveValueListFromLeaf(InnerList *cur_value) {
+      TERRIER_ASSERT(IsLeaf(), "RemoveValueListFromLeaf should be called from leaf node");
+      if (cur_value->prev_ == nullptr) cur_node->value_list_ = cur_value->next_;
+      else cur_value->prev->next_ = cur_value->next_;
+      if (cur_value->next_ != nullptr) cur_value->next_->prev_ = cur_value->prev_;
+      cur_node->size_ --;
+      delete cur_value;
+    }
+    // detach the given value list from parent, return it
+    TreeNode *DetachValueFromNode(InnerList *separation_value) {
+      if (separation_value == value_list_) value_list_ = value_list_->next_;
+      if (separation_value->prev_ != nullptr) separation_value->prev_->next_ = separation_value->next_;
+      if (separation_value->next_ != nullptr) separation_value->next_->prev_ = separation_value->prev_;
+      separation_value->prev_ = nullptr;
+      separation_value->next_ = nullptr;
+      return separation_value;
+    }
+
+    // called from root to removed the key value pair from the leaf,
+    // iterate backwards to maintain the tree invariance
+    TreeNode *MergeFromLeaf(TreeNode *leaf_node, KeyType key, size_t order) {
+      // delete value from leaf node
       // find the proper value list
-      TERRIER_ASSERT(this->IsLeaf(), "DeleteValueFromLeaf should be called from leaf node");
-      InnerList *cur_value = value_list_;
+      TERRIER_ASSERT(leaf_node->IsLeaf(), "MergeFromLeaf should be called from leaf node");
+      InnerList *cur_value = leaf_node->value_list_;
+      TreeNode *root = this;
+      
       while (cur_value != nullptr && (!(cur_value->KeyCmpEqual(cur_value->key_, key)))) {
         cur_value = cur_value->next_;
       }
+      // if the key ror value does not exists, return null as failed
       if (cur_value == nullptr) return nullptr;
-      InnerList *remove_res = cur_value->RemoveValue(value);
-      // fail to delete any
-      if (remove_res == nullptr) return nullptr;
-      // check if the innerlist needs to be remove
-      if (remove_res->IsEmpty()) {
-        if (remove_res == value_list_) {
-          value_list_ = value_list_->next_;
-          if (value_list_ != nullptr) value_list_->prev_ = nullptr;
-        } else {
-          remove_res->prev_->next_ = remove_res->next_;
-          remove_res->next_->prev_ = remove_res->prev_;
-        }
-        delete remove_res;
-      }
-      return this;
-    }
-
-    bool CurNodeValid(TreeNode *cur_node) { return cur_node->value_list_ != nullptr; }
-
-    // called from root
-    TreeNode *MergeFromLeaf(TreeNode *leaf_node, KeyType key) {
-      TreeNode *root = this;
-      // check if leaf id empty after deletion, if yes then needs to merge
-      if (CurNodeValid(leaf_node)) return root;
-      TreeNode *parent, *cur_node, *left_child, *right_child, *merged_node;
-      InnerList *separation_value;
-      size_t separation_index = 1;  // index of right hand side
-      cur_node = leaf_node;
-      while (!CurNodeValid(cur_node)) {
-        if (cur_node == root) {
-          TERRIER_ASSERT(root->size_ == 0 && root->ptr_list_.size() == 1,
-                         "if roots needs to tear down to child, its ptr side should be 1");
-          merged_node = root;
-          root = root->ptr_list_[0];
-          delete merged_node;
-
-        } else {
-          // find parent
+      InnerList *removed_leaf = cur_value->RemoveValue(value);
+      // fail to delete any value
+      if (removed_leaf == nullptr) return nullptr;
+      // check if the leaf innerlist needs to be remove
+      if (removed_leaf->IsEmpty()) {
+        cur_node = leaf_node;
+        TreeNode *parent, *left_sib, *right_sib;
+        size_t right_ptr_index = 1, ptr_index, sib_index;  // index of right hand side
+        InnerList *separation_value, *left_sep_value, *right_sep_value, *borrowed_value;
+        KeyType tmp_key;
+        while (cur_node-> != nullptr) {
           parent = cur_node->parent_;
-          // find its left child ,if not find its right child
-          // find parent's value that separatesthe two children
-          // find parent's curresponding pointers two the two children
-          if (cur_node == parent->ptr_list_[0]) {
-            left_child = cur_node;
-            right_child = ptr_list_[1];
-            separation_value = parent->value_list_;
-          } else {
-            separation_value = parent->value_list_;
-            while (parent->ptr_list_[separation_index] != cur_node) {
-              separation_value = separation_value->next_;
-              separation_index++;
+          // find the node needed to be deleted, its parent, 
+          /////////////////////////// root case ////////////////////////////////////////
+          if (cur_node == root) {
+            // if root is empty, means that it children is merged and level shrinked
+            if (cur_node->value_list_ == nullptr) {
+              // if node is already leaf, just leave it like this
+              // if root has children merged, shift root into its children and delete current root
+              if (!cur_node->IsLeaf()) {
+                root = cur_node->ptr_list_[0];
+                delete cur_node;
+              }
+            } else {
+              // if root not empty, search if we still can find the value to delete
+              cur_value = cur_node->value_list_;
+              while (cur_value != nullptr) {
+                // if find value to remove
+                if (cur_value->KeyCmpEqual(cur_value->key_, key)) {
+                  // if root is the leaf, then directly remove it
+                  if (cur_node->IsLeaf()) {
+                    cur_node->RemoveValueListFromNode(cur_value);
+                  }
+                  // if root has child, replace this value with the smallest key to its right
+                  else {
+                    cur_value->key_ = cur_node->ptr_list[right_ptr_index]->FindSmallestKey();
+                  }
+                  break;
+                }
+                cur_value = cur_value->next_;
+                right_ptr_index ++;
+              }
             }
-            TERRIER_ASSERT(separation_index <= parent->size_, "Finding separation index goes beyond parent size");
-            left_child = parent->ptr_list_[separation_index - 1];
-            right_child = cur_node;
-          }
-          // merge the two children as a new one
-          Merge(left_child, right_child);
-          merged_node = left_child;
-          // delete the separation value in parent set to point to new children
-          parent->ptr_list_.erase(parent->ptr_list_.begin() + separation_index);
-          if (separation_value == parent->value_list_) {
-            parent->value_list_ = parent->value_list_->next_;
-            if (parent->value_list_ != nullptr) parent->value_list_->prev_ = nullptr;
-          } else {
-            separation_value->prev_->next_ = separation_value->next_;
-            if (separation_value->next_ != nullptr) separation_value->next_->prev_ = separation_value->prev_;
-          }
-          delete separation_value;
-          cur_node = parent;
-        }
-      }
-      return root;
+          } // end if cur_node == root
+          else {
+            // check to see if there is value needed to be removed
+            right_ptr_index = 1;
+            cur_value = cur_node->value_list_;
+            while (cur_value != nullptr) {
+              // if there is key needed to be removed
+              if (cur_value->KeyCmpEqual(cur_value->key_, key)) {
+                // if this is leaf, directly remove the value
+                if (cur_node->IsLeaf()) {
+                  cur_node->RemoveValueListFromNode(cur_value);
+                }
+                // if non-leaf, replace it with the right hand side least key in leaf level
+                else {
+                    cur_value->key_ = cur_node->ptr_list_[right_ptr_index]->FindSmallestKey();
+                }
+                break;
+              }
+              cur_value = cur_value->next;
+              right_ptr_index ++;
+            }
+            // after removal, check if current node needs to rebalance
+            if (!cur_node->NodeValid()) {
+              /*
+              Figure out:
+                left_sib: the left sibling of current node, null if cur_node is left most
+                right_sib: the right sibling of current node, null if right most
+                left_sep_value: parent separation value to the left of cur_node ptr, null if DCN
+                right_sep_value: parent separation value to the right of the cur node ptr, null if DCN
+                ptr_index: parent index in ptr list that points to cur_node
+              */
+              if (parent->ptr_list_[0] == cur_node) {
+                left_sib = nullptr;
+                right_sib = parent->ptr_list_[1];
+                left_sep_value = nullptr;
+                right_sep_value = parent->value_list_;
+                ptr_index = 0;
+              } else {
+                left_sep_value = parent->value_list_;
+                for (ptr_index = 1; ptr_index < parent->size_; ptr_index ++) {
+                  if (parent->ptr_list_[ptr_index] == cur_node) break;
+                  left_sep_value = left_sep_value->next_;
+                }
+                right_sep_value = left_sep_value->next_;
+                left_sib = parent->ptr_list_[ptr_index - 1];
+                if (right_sep_value == nullptr) right_sib == nullptr;
+              }
+              // try borrow from right sibling
+              if (right_sib != nullptr && right_sib->RemoveOneStillValid(order)) {
+                /*
+                require : parent separation value
+                          left most value from right sib
+                          current right most value in current node
+                if cur node is not leaf:
+                          append parent separation value to back of the right most value in cur node
+                          move left most value from right sib as new separation value at parent
+                          detach the left most ptr list append it to the back of cur node ptr list
+                if cur node is leaf: then parent separation value = left most value for right sib
+                          detach the left most child, append to the cur_node back
+                          update parent separation value as the new value list start on right sib
+                */
+               // non leaf case
+                separation_value = right_sep_value;
+                if (!curNode->IsLeaf()) {
+                  borrowed_value = right_sib->value_list_;
+                  tmp_key = borrowed_value->key_;
+                  borrowed_value->key_ = separation_value->key_;
+                  right_sib->value_list_ = borrowed_value->next_;
+                  right_sib->value_list_->prev_ = nullptr;
+                  borrowed_value->next_ = nullptr;
+                  if (cur_node->value_list_ == nullptr) cur_node->value_list_ = borrowed_value;
+                  else cur_node->value_list_->FindListEnd()->InsertBack(borrowed_value);
+
+                  separation_value->key_ = tmp_key;
+
+                  cur_node->ptr_list_->push_back(right_sib->PopPtrListFront());
+                } else {
+                  borrowed_value = right_sib->value_list_;
+                  right_sib->value_list_ = borrowed_value->next_;
+                  right_sib->value_list_->prev_ = nullptr;
+                  borrowed_value->next_ = nullptr;
+                  if (cur_node->value_list_ == nullptr) cur_node->value_list_ = borrowed_value;
+                  else cur_node->value_list_->FindListEnd()->InsertBack(borrowed_value);
+
+                  separation_value->key_ = right_sib->FindSmallestKey();
+                }
+                right_sib->size_ --;
+                cur_node->size_ ++;
+              }
+              // else try borrow from left sibling
+              else if (left_sib != nullptr && left_sib->RemoveOneStillValid(order)) {
+                /*
+                require : parent separation value
+                          right most value from left sib
+                if cur node is not leaf:
+                          append parent separation value to the front of cur node
+                          move right most value from left sib as new separation value at parent
+                          detach the right most ptr list append it to the front of cur node ptr list
+                if cur node is leaf: then parent separation value = newly borrowed value from left
+                          detach the left most child, append to the cur_node back
+                          update parent separation value as the new value list start on right sib
+                */
+               // if not leaf
+                separation_value = left_sep_value;
+                if (!cur_node->IsLeaf()) {
+                  borrowed_value = left_sib->value_list_->FindListEnd();
+                  borrowed_value->prev_->next_ = nullptr;
+                  borrowed_value->prev_ = nullptr;
+                  tmp_key = borrowed_value->key_;
+                  borrowed_value->key_ = separation_value->key_;
+                  if (cur_node->value_list_ == nullptr) cur_node->value_list_ = borrowed_value;
+                  else {
+                    cur_node->value_list_->InsertFront(borrowed_value);
+                    cur_node->value_list_ = borrowed_value;
+                    separation_value->key = cur_node->FindSmallestKey();
+                  } 
+                  separation_value->key_ = tmp_key;
+                  cur_node->InsertPtrFront(left_sib->ptr_list_.back());
+                  left_sib->ptr_list_.pop_back();
+                } else {
+                  borrowed_value = left_sib->value_list_->FindListEnd();
+                  borrowed_value->prev_->next_ = nullptr;
+                  borrowed_value->prev_ = nullptr;
+                  if (cur_node->value_list_ == nullptr) cur_node->value_list_ = borrowed_value;
+                  else {
+                    cur_node->value_list_->InsertFront(borrowed_value);
+                    cur_node->value_list_ = borrowed_value;
+                    separation_value->key = cur_node->FindSmallestKey();
+                  } 
+                }
+                left_sib->size_ --;
+                cur_node->size_ ++;
+              }
+              // else try merge with right sibling if it is not the right most sibling
+              else if (right_sib != nullptr) {
+                /*
+                require: right_sib,
+                if cur_node is not leaf
+                        detach the separation value from parent
+                        delete the right ptr from, parent
+                        merge the curnode, detached separation value, right_sib's value_list  from left to right
+                        merge the ptr list from cur_node to the right sib 
+                if cur node is leaf
+                        merge cur_node value_list, right sib value_list from left to right
+                        delete the separation valie from parent
+                        delete right sib ptr from parent
+                */
+                sib_index = ptr_index + 1;
+                separation_index = right_sep_value;
+                if (!cur_node->IsLeaf()) {
+                  // detach
+                  parent->DetachValueFromNode(separation_value);
+                  parent->ptr_list_.erase(parent->ptr_list_.begin() + sib_index);
+                  // use variable borrowed value as the innerlist performing insertion
+                  if (cur_node->value_list_ == nullptr) {
+                    cur_node->value_list_ = separation_value;
+                  } else {
+                    borrowed_value = cur_node->value_list_->FindListEnd();
+                    borrowed_value.InsertBack(separation);
+                  }
+                  borrowed_value = separation_value;
+                  borrowed_value.InsertBack(right_sib->value_list_);
+                  // merge ptr list
+                  cur_node->ptr_list_.insert(cur_node->ptr_list_.end(), right_sib->ptr_list_.begin(), right_sib->ptr_list_.end());
+                  
+                  cur_node->size_ += (right_sib->size_ + 1);
+                  parent->size_ --;
+                } else {
+                  // merge value list
+                  if (cur_node->value_list_ == nullptr) cur_node->value_list_ = right_sib->value_list_;
+                  else cur_node->value_list_->FindListEnd()->InsertEnd(right_sib->value_list_);
+                  // detach and delete the separation value from parent
+                  parent->DetachValueFromNode(separation_value);
+                  delete separation_value;
+
+                  // update cur_node right sib and right sib->right_sib->left_sib
+                  cur_node->right_sibling_ = right_sib->right_sibling_;
+                  if (right_sib->right_sibling_ != nullptr) right_sib->right_sibling_->left_sibling_ = cur_node;
+                  // update size
+                  parent->size_ --;
+                  cur_node->size_ += right_sib->size_;
+                }
+                right_sib->value_list_ = nullptr; // set to nullptr to prevent value_list being deleted
+                delete right_sib;
+              }
+              // else try merge with left sibling
+              else {
+                TERRIER_ASSERT(left_sib != nullptr, "left sibling should not be null otherwise tree not valid");
+                /*
+                require: left_sib,
+                if cur_node is not leaf
+                        detach the separation value from parent
+                        delete the left ptr from, parent
+                        merge the left value_list_, separation_value, cur_node value_list from left to right
+                        set the cur_node value_list to the left value_list 
+                        merge the ptr list from leftNode ptr_list, cur_node ptr list from left to right 
+                if cur node is leaf
+                        merge left_sib value_list, cur_node value_list from left to right
+                        delete the separation valie from parent
+                        delete left sib ptr from parent
+                */
+                sib_index = ptr_index - 1;
+                separation_value = left_sep_value;
+                if (!cur_node->IsLeaf()) {
+                  // detach
+                  parent->DetachValueFromNode(separation_value);
+                  // delete
+                  parent->ptr_list_->erase(parent->ptr_list_.begin() + sib_index);
+                  // merge value list
+                  left_sib->value_list_->FindListEnd()->InsertEnd(separation_value);
+                  if(cur_node->value_list_ != nullptr) separation_value->InsertEnd(cur_node->value_list_);
+                  cur_node->value_list_ = left_sib->value_list_;
+                  cur_node->ptr_list_.insert(cur_node->ptr_list_.begin(), left_sib->ptr_list_.begin(), left_sib->ptr_list_.end());
+                  parent->size_ --;
+                  cur_node->size_ += (1 + left_sib->size_);
+                } else {
+                  // detach
+                  parent->DetachValueFromNode(separation_value);
+                  // delete
+                  parent->ptr_list_->erase(parent->ptr_list_.begin() + sib_index);
+                  delete separation_value;
+                  if(cur_node->value_list_ != nullptr) left_sib->value_list_->FindListEnd()->InsertEnd(cur_node->value_list_);
+                  cur_node->value_list_ = left_sib->value_list_;
+                  parent->size_ --;
+                  cur_node->size_ += (left_sib->size_);
+                }
+                left_sib->value_list_ = nullptr;
+                delete left_sib;
+              }
+            }
+          } // end else where cur node is not root
+          cur_node = parent; // proceed upward
+        } // while cur node is not null
+      } // if cur leaf val is empty
+      return root; // return the new root post merge
     }
 
    private:
@@ -387,6 +632,14 @@ class BPlusTree {
         next = next->next_;
       }
       return cur;
+    }
+    TreeNode *PopPtrListFront() {
+      TreeNode *result = *ptr_list_.begin();
+      ptr_list_.erase(ptr_list_.begin());
+      return result;
+    }
+    void InsertPtrFront(TreeNode *node_ptr) {
+      ptr_list_.insert(ptr_list_.begin(), node_ptr);
     }
     // assuming this is a leafNode
     TreeNode *InsertAtLeafNode(InnerList *new_list, bool allow_dup = true) {
@@ -553,9 +806,9 @@ class BPlusTree {
   bool Delete(KeyType key, ValueType value) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *leaf_node = root_->GetNodeRecursive(key);
-    TreeNode *half_result = leaf_node->DeleteValueFromLeaf(key, value);
-    if(half_result == nullptr) return false;
-    TreeNode *new_root = root_->MergeFromLeaf(leaf_node, key);
+    TreeNode *new_root = root_->MergeFromLeaf(leaf_node, key, order_);
+    // case when did not find proper key value pair to delete
+    if (new_root == nullptr) return false;
     root_ = new_root;
     return true;
   }
