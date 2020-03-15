@@ -18,9 +18,12 @@ struct BPlusTreeTests : public TerrierTest {
 void PrintNode(terrier::storage::index::BPlusTree<int64_t, int64_t>::TreeNode *node) {
   terrier::storage::index::BPlusTree<int64_t, int64_t>::InnerList *value = node->value_list_;
   size_t idx = 0;
+  // std::cerr<<"here\n";
   while (value != nullptr) {
+    std::cerr << value->key_ << ",";
     value = value->next_;
   }
+  std::cerr << ">>>>>\n";
   for (idx = 0; idx < node->ptr_list_.size(); idx++) {
     PrintNode(node->ptr_list_[idx]);
   }
@@ -425,7 +428,7 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
   // level 1
   EXPECT_EQ(tree->root_->size_, 2);
   EXPECT_EQ(tree->root_->value_list_->key_, 31);
-  EXPECT_EQ(tree->root_->value_list_->next_->key_, 72);
+  EXPECT_EQ(tree->root_->value_list_->next_->key_, 81);
   EXPECT_EQ(tree->root_->ptr_list_.size(), 3);
   // level 2
   EXPECT_EQ(tree->root_->ptr_list_[0]->size_, 4);
@@ -437,14 +440,13 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   EXPECT_EQ(tree->root_->ptr_list_[1]->size_, 2);
   EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->key_, 36);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->key_, 65);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->key_, 72);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_.size(), 3);
 
-  EXPECT_EQ(tree->root_->ptr_list_[2]->size_, 3);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 81);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 105);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->next_->key_, 157);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_.size(), 4);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->size_, 2);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 105);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 157);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_.size(), 3);
 
   // level 3
   EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[0]->size_, 2);
@@ -475,142 +477,332 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->value_list_->key_, 31);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->value_list_->next_->key_, 34);
 
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->size_, 2);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->size_, 4);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->value_list_->key_, 36);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->value_list_->next_->key_, 45);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->key_, 72);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->key_, 78);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->next_->key_, 80);
+  /*
+                                                        31,81
 
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->size_, 3);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->key_, 65);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->key_, 67);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->next_->key_, 71);
+                  3,10,15,19                                   36,72                                105,157
 
-
-
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->size_, 3);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->value_list_->key_, 72);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->value_list_->next_->key_, 78);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->value_list_->next_->next_->key_, 80);
-
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->size_, 2);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->key_, 81);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->next_->key_, 97);
-
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->size_, 3);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->key_, 105);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->next_->key_, 135);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->next_->next_->key_, 145);
-
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->size_, 4);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->key_, 157);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->next_->key_, 162);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->next_->next_->key_, 164);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->next_->next_->next_->key_, 178);
+  0,2    3,7,9    10,12    15,16   19,25,26        31,34    36,65,67,71    72,78,80       81,97     105,135,145     157,162,164,178
+  */
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 105);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 157);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->key_, 105);
 
   // test deletion
   tree->Delete(105, 105);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->next_->key_, 135);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 135);
+  /*
+                                                               31,81
 
-  tree->Delete(97, 97);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->key_, 80);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->next_->key_, 81);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 80);
-  tree->Delete(25, 25);
-  tree->Delete(145, 145);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->next_->key_, 162);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->key_, 162);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->next_->key_, 157);
+                  3,10,15,19                                   36,72                                 135,157
+
+  0,2    3,7,9    10,12    15,16   19,25,26        31,34    36,65,67,71    72,78,80        81,97     135,145     157,162,164,178
+  */
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 135);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 157);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->key_, 135);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->next_->key_, 145);
+  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->next_->next_, nullptr);
   
-  tree->Delete(71, 71);
-  tree->Delete(31, 31);
+  PrintNode(tree->root_);
+  std::cerr << "Enter Deleting 97\n";
+  tree->Delete(97, 97);
+  PrintNode(tree->root_);
+  std::cerr << tree->root_->ptr_list_[1]->ptr_list_.size() << "\n";
   /*
-                                                     19,72
+                                                               31
 
-                   3,10,15                           34,65                               80,135,162
+                  3,10,15,19                                                             36,72,81,157
 
-  0,2    3,7,9    10,12    15,16         19,26    34,36,45   65,67,71      72,78   80,81   135,157     162,164,178
+  0,2    3,7,9    10,12    15,16   19,25,26                       31,34    36,65,67,71    72,78,80        81,135,145     157,162,164,178
   */
- // level 1
-  EXPECT_EQ(tree->root_->value_list_->key_, 19);
-  // level 2
-  EXPECT_EQ(tree->root_->ptr_list_[0]->value_list_->next_->key_, 10);
-  EXPECT_EQ(tree->root_->ptr_list_[0]->value_list_->next_->next_->key_, 15);
-
-  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->key_, 34);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->next_->key_, 65);
-
-  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 80);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->next_->key_, 135);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->next_->next_->key_, 162);
-  // level 3
-  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[3]->value_list_->key_, 15);
-  EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[3]->value_list_->next_->key_, 16);
-
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->value_list_->key_, 19);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->value_list_->next_->key_, 26);
-
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->value_list_->key_, 34);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->value_list_->next_->key_, 36);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[1]->value_list_->next_->next_->key_, 45);
-
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->key_, 65);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->key_, 67);
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->next_->key_, 71);
-
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->value_list_->key_, 72);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[0]->value_list_->next_->key_, 78);
-
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->key_, 80);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->next_->key_, 81);
-
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->key_, 135);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[2]->value_list_->next_->key_, 157);
-
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->key_, 162);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->next_->key_, 164);
-  EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[3]->value_list_->next_->next_->key_, 178);
-  tree->Delete(80, 80);
-  /*
-                                                     19,72
-
-                   3,10,15                           34,65                           135,162
-
-  0,2    3,7,9    10,12    15,16         19,26    34,36,45   65,67,71      72,78,81   135,157     162,164,178
-  */
-  tree->Delete(135, 135);
-  /*
-                                                     19,72
-
-                   3,10,15                           34,65                           81,162
-
-  0,2    3,7,9    10,12    15,16         19,26    34,36,45   65,67,71      72,78   81,157     162,164,178
-  */
-
-
+  EXPECT_EQ(tree->root_->size_, 1);
+  EXPECT_EQ(tree->root_->value_list_->key_, 31);
+  EXPECT_EQ(tree->root_->ptr_list_.size(), 2);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->size_, 4);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->key_, 36);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->key_, 72);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->next_->key_, 81);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->next_->next_->key_, 157);
+  
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_.size(), 5);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[3]->value_list_->key_, 81);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[3]->value_list_->next_->key_, 135);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[3]->value_list_->next_->next_->key_, 145);
+  
   tree->Delete(10, 10);
+  /*
+                                                               31
+
+                  3,9,15,19                                                             36,72,81,157
+
+  0,2    3,7      9,12    15,16   19,25,26                       31,34    36,65,67,71    72,78,80        81,135,145     157,162,164,178
+  */
+  std::cerr << "---------------------------------- Post deleting 10 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(7, 7);
+  /*
+                                                     31
+
+                  3,15,19                                                             36,72,81,157
+
+  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,67,71    72,78,80        81,135,145     157,162,164,178
+  */
+  std::cerr << "---------------------------------- Post deleting 7 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(78, 78);
+  /*
+                                                     31
+
+                  3,15,19                                                             36,72,81,157
+
+  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,67,71    72,80        81,135,145     157,162,164,178
+  */
+  std::cerr << "---------------------------------- Post deleting 78 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(67, 67);
+  /*
+                                                     31
+
+                  3,15,19                                                             36,72,81,157
+
+  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,71    72,80        81,135,145     157,162,164,178
+  */
+  std::cerr << "---------------------------------- Post deleting 67 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(72, 72);
+  /*
+                                                     31
+
+                  3,15,19                                                    36,80,135,157
+
+  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,71    80,81    135,145     157,162,164,178
+  */
+  std::cerr << "---------------------------------- Post deleting 72 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(157, 157);
+  /*
+                                                     31
+
+                  3,15,19                                                    36,80,135,162
+
+  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,71    80,81    135,145     162,164,178
+  */
+  std::cerr << "---------------------------------- Post deleting 157 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(36, 36);
+  /*
+                                                     31
+
+                  3,15,19                                                    65,80,135,162
+
+  0,2    3,9,12    15,16   19,25,26                       31,34    65,71    80,81    135,145     162,164,178
+  */
+  std::cerr << "---------------------------------- Post deleting 36 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(81, 81);
+  /*
+                                                     31
+
+                  3,15,19                                                    65,80,162
+
+  0,2    3,9,12    15,16   19,25,26                       31,34    65,71    80,135,145     162,164,178
+  */
+  std::cerr << "---------------------------------- Post deleting 81 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(2, 2);
+  /*
+                                            31
+
+                9,15,19                                            65,80,162
+
+  0,3    9,12    15,16   19,25,26                       31,34    65,71    80,135,145     162,164,178
+  */
+  std::cerr << "---------------------------------- Post deleting 2 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(164, 164);
+  /*
+                                            31
+
+                9,15,19                                            65,80,162
+
+  0,3    9,12    15,16   19,25,26                       31,34    65,71    80,135,145     162,178
+  */
+  std::cerr << "---------------------------------- Post deleting 164 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(3, 3);
+  /*
+                                     31
+
+            15,19                                            65,80,162
+
+  0,9,12    15,16   19,25,26                       31,34    65,71    80,135,145     162,178
+  */
+  std::cerr << "---------------------------------- Post deleting 3 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(34, 34);
+  /*
+                                     31
+
+            15,19                                            80,162
+
+  0,9,12    15,16   19,25,26                       31,65,71    80,135,145     162,178
+  */
+  std::cerr << "---------------------------------- Post deleting 34 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(135, 135);
+  /*
+                                     31
+
+            15,19                                            80,162
+
+  0,9,12    15,16   19,25,26                       31,65,71    80,145     162,178
+  */
+  std::cerr << "---------------------------------- Post deleting 135 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(26, 26);
+  /*
+                                     31
+
+            15,19                                          80,162
+
+  0,9,12    15,16   19,25                       31,65,71    80,145     162,178
+  */
+  std::cerr << "---------------------------------- Post deleting 26 ---------------------\n";
+  if (tree->root_ == nullptr) std::cerr << "root is null\n";
+  PrintNode(tree->root_);
+
   tree->Delete(178, 178);
+  /*
+                          15,19,31,80
+
+  0,9,12    15,16     19,25     31,65,71    80,145,162
+  */
+  std::cerr << "---------------------------------- Post deleting 178 ---------------------\n";
+  PrintTree(tree);
+
   tree->Delete(162, 162);
+  /*
+                          15,19,31,80
+
+  0,9,12    15,16     19,25     31,65,71    80,145
+  */
+  std::cerr << "---------------------------------- Post deleting 162 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(0, 0);
+  /*
+                          15,19,31,80
+
+  9,12    15,16     19,25     31,65,71    80,145
+  */
+  std::cerr << "---------------------------------- Post deleting 0 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(16, 16);
+  /*
+                          15,31,80
+
+  9,12    15,19,25     31,65,71    80,145
+  */
+  std::cerr << "---------------------------------- Post deleting 16 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(19, 19);
+  /*
+                15,31,80
+
+  9,12    15,25     31,65,71    80,145
+  */
+  std::cerr << "---------------------------------- Post deleting 19 ---------------------\n";
+  PrintNode(tree->root_);
   
   tree->Delete(65, 65);
+  /*
+                15,31,80
+
+  9,12    15,25     31,71    80,145
+  */
+  std::cerr << "---------------------------------- Post deleting 65 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(12, 12);
+  /*
+                31,80
+
+  9,15,25     31,71    80,145
+  */
+  std::cerr << "---------------------------------- Post deleting 12 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(15, 15);
+  /*
+                31,80
+
+  9,25     31,71    80,145
+  */
+  std::cerr << "---------------------------------- Post deleting 15 ---------------------\n";
+  PrintNode(tree->root_);
+
   tree->Delete(9, 9);
+  /*
+          80
+
+  25,31,71    80,145
+  */
+  std::cerr << "---------------------------------- Post deleting 9 ---------------------\n";
+  PrintNode(tree->root_);
+
+  tree->Delete(80, 80);
+  /*
+  25,31,71,145
+  */
+  std::cerr << "---------------------------------- Post deleting 80 ---------------------\n";
+  PrintNode(tree->root_);
+
+  tree->Delete(25, 25);
+  /*
+  31,71,145
+  */
+  std::cerr << "---------------------------------- Post deleting 25 ---------------------\n";
+  PrintNode(tree->root_);
+
+  tree->Delete(145, 145);
+  /*
+  31,71
+  */
+  std::cerr << "---------------------------------- Post deleting 145 ---------------------\n";
+  PrintNode(tree->root_);
+
+  tree->Delete(31, 31);
+  /*
+  71
+  */
+  std::cerr << "---------------------------------- Post deleting 31 ---------------------\n";
+  PrintNode(tree->root_);
+
+  tree->Delete(71, 71);
+  /*
+  */
+  std::cerr << "---------------------------------- Post deleting 71 ---------------------\n";
+  PrintNode(tree->root_);
   
 
   EXPECT_EQ(tree->root_->size_, 0);
