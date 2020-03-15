@@ -377,14 +377,12 @@ class BPlusTree {
               // if node is already leaf, just leave it like this
               // if root has children merged, shift root into its children and delete current root
               if (!cur_node->IsLeaf()) {
-                std::cerr << cur_node->ptr_list_.size()<< " enter\n";
                 root = cur_node->ptr_list_[0];
                 cur_node->ptr_list_.pop_back();
                 root->parent_ = nullptr;
                 parent = nullptr;
                 delete cur_node;
                 cur_node = nullptr;
-                std::cerr<<"exit\n";
                 break;
               }
             } else {
@@ -417,9 +415,7 @@ class BPlusTree {
               if (cur_value->KeyCmpEqual(cur_value->key_, key)) {
                 // if this is leaf, directly remove the value
                 if (cur_node->IsLeaf()) {
-                  std::cerr << "pre emove value from node\n";
                   cur_node->RemoveValueListFromLeaf(cur_value);
-                  std::cerr << "emove value from node\n";
                 }
                 // if non-leaf, replace it with the right hand side least key in leaf level
                 else {
@@ -432,7 +428,6 @@ class BPlusTree {
             }
             // after removal, check if current node needs to rebalance
             if (!cur_node->NodeValid(order)) {
-              std::cerr << "node not valid\n";
               /*
               Figure out:
                 left_sib: the left sibling of current node, null if cur_node is left most
@@ -455,8 +450,10 @@ class BPlusTree {
                 }
                 right_sep_value = left_sep_value->next_;
                 left_sib = parent->ptr_list_[ptr_index - 1];
-                if (right_sep_value == nullptr) right_sib = nullptr;
-                else right_sib = parent->ptr_list_[ptr_index + 1];
+                if (right_sep_value == nullptr)
+                  right_sib = nullptr;
+                else
+                  right_sib = parent->ptr_list_[ptr_index + 1];
               }
               // try borrow from right sibling
               if (right_sib != nullptr && right_sib->RemoveOneStillValid(order)) {
@@ -552,8 +549,6 @@ class BPlusTree {
               }
               // else try merge with right sibling if it is not the right most sibling
               else if (right_sib != nullptr) {
-                std::cerr << "to merge with right sib\n";
-
                 /*
                 require: right_sib,
                 if cur_node is not leaf
@@ -582,8 +577,9 @@ class BPlusTree {
                   borrowed_value = separation_value;
                   borrowed_value->AppendEnd(right_sib->value_list_);
                   // merge ptr list
-                  while(right_sib->ptr_list_.size() > 0) {
-                    cur_node->ptr_list_.insert(cur_node->ptr_list_.begin() + cur_node->size_+1, right_sib->ptr_list_.back());
+                  while (right_sib->ptr_list_.size() > 0) {
+                    cur_node->ptr_list_.insert(cur_node->ptr_list_.begin() + cur_node->size_ + 1,
+                                               right_sib->ptr_list_.back());
                     right_sib->ptr_list_.back()->parent_ = cur_node;
                     right_sib->ptr_list_.pop_back();
                   }
@@ -628,7 +624,6 @@ class BPlusTree {
                         delete left sib ptr from parent
                 */
                 sib_index = ptr_index - 1;
-                std::cerr << "left sib index " << sib_index << "\n";
                 separation_value = left_sep_value;
                 if (!cur_node->IsLeaf()) {
                   // detach
@@ -639,12 +634,12 @@ class BPlusTree {
                   left_sib->value_list_->FindListEnd()->AppendEnd(separation_value);
                   if (cur_node->value_list_ != nullptr) separation_value->AppendEnd(cur_node->value_list_);
                   cur_node->value_list_ = left_sib->value_list_;
-                  while(left_sib->ptr_list_.size() > 0) {
+                  while (left_sib->ptr_list_.size() > 0) {
                     cur_node->ptr_list_.insert(cur_node->ptr_list_.begin(), left_sib->ptr_list_.back());
                     left_sib->ptr_list_.back()->parent_ = cur_node;
                     left_sib->ptr_list_.pop_back();
                   }
-                  
+
                   parent->size_--;
                   cur_node->size_ += (1 + left_sib->size_);
                 } else {
@@ -857,7 +852,6 @@ class BPlusTree {
     TreeNode *new_root = root_->MergeFromLeaf(leaf_node, key, value, order_);
     // case when did not find proper key value pair to delete
     if (new_root == nullptr) return false;
-    std::cerr<<"update new root\n";
     this->root_ = new_root;
     return true;
   }
