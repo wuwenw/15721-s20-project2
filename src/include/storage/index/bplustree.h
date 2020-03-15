@@ -106,15 +106,18 @@ class BPlusTree {
     InnerList *RemoveValue(ValueType value) {
       InnerList *res = nullptr;
       auto iter = same_key_values_.end();
+      bool deleted_one = false;
       --iter;
       while (iter != same_key_values_.begin()) {
         if (this->ValueCmpEqual(*iter, value)) {
           same_key_values_.erase(iter);
           res = this;
+          deleted_one = true;
+          break;
         }
         --iter;
       }
-      if (this->ValueCmpEqual(*iter, value)) {
+      if ((!deleted_one) && this->ValueCmpEqual(*iter, value)) {
         same_key_values_.erase(iter);
         res = this;
       }

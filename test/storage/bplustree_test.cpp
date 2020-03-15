@@ -797,12 +797,13 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
   */
   std::cerr << "---------------------------------- Post deleting 31 ---------------------\n";
   PrintNode(tree->root_);
-
+  tree->Insert(71, 71);
   tree->Delete(71, 71);
   /*
   */
   std::cerr << "---------------------------------- Post deleting 71 ---------------------\n";
   PrintNode(tree->root_);
+  tree->Delete(71, 71);
   
 
   EXPECT_EQ(tree->root_->size_, 0);
