@@ -308,7 +308,7 @@ class BPlusTree {
     bool RemoveOneStillValid(size_t order) { return this->size_ - 1 >= order / 2; }
     KeyType FindSmallestKey() {
       if (IsLeaf()) return value_list_->key_;
-      return ptr_list_[0]->FindSmallestkey();
+      return ptr_list_[0]->FindSmallestKey();
     }
 
     void RemoveValueListFromLeaf(InnerList *cur_value) {
@@ -316,13 +316,13 @@ class BPlusTree {
       if (cur_value->prev_ == nullptr)
         value_list_ = cur_value->next_;
       else
-        cur_value->prev->next_ = cur_value->next_;
+        cur_value->prev_->next_ = cur_value->next_;
       if (cur_value->next_ != nullptr) cur_value->next_->prev_ = cur_value->prev_;
       size_--;
       delete cur_value;
     }
     // detach the given value list from parent, return it
-    TreeNode *DetachValueFromNode(InnerList *separation_value) {
+    InnerList *DetachValueFromNode(InnerList *separation_value) {
       if (separation_value == value_list_) value_list_ = value_list_->next_;
       if (separation_value->prev_ != nullptr) separation_value->prev_->next_ = separation_value->next_;
       if (separation_value->next_ != nullptr) separation_value->next_->prev_ = separation_value->prev_;
@@ -381,11 +381,11 @@ class BPlusTree {
                 if (cur_value->KeyCmpEqual(cur_value->key_, key)) {
                   // if root is the leaf, then directly remove it
                   if (cur_node->IsLeaf()) {
-                    cur_node->RemoveValueListFromNode(cur_value);
+                    cur_node->RemoveValueListFromLeaf(cur_value);
                   }
                   // if root has child, replace this value with the smallest key to its right
                   else {
-                    cur_value->key_ = cur_node->ptr_list[right_ptr_index]->FindSmallestKey();
+                    cur_value->key_ = cur_node->ptr_list_[right_ptr_index]->FindSmallestKey();
                   }
                   break;
                 }
@@ -403,7 +403,7 @@ class BPlusTree {
               if (cur_value->KeyCmpEqual(cur_value->key_, key)) {
                 // if this is leaf, directly remove the value
                 if (cur_node->IsLeaf()) {
-                  cur_node->RemoveValueListFromNode(cur_value);
+                  cur_node->RemoveValueListFromLeaf(cur_value);
                 }
                 // if non-leaf, replace it with the right hand side least key in leaf level
                 else {
@@ -411,11 +411,11 @@ class BPlusTree {
                 }
                 break;
               }
-              cur_value = cur_value->next;
+              cur_value = cur_value->next_;
               right_ptr_index++;
             }
             // after removal, check if current node needs to rebalance
-            if (!cur_node->NodeValid()) {
+            if (!cur_node->NodeValid(order)) {
               /*
               Figure out:
                 left_sib: the left sibling of current node, null if cur_node is left most
@@ -438,7 +438,7 @@ class BPlusTree {
                 }
                 right_sep_value = left_sep_value->next_;
                 left_sib = parent->ptr_list_[ptr_index - 1];
-                if (right_sep_value == nullptr) right_sib == nullptr;
+                if (right_sep_value == nullptr) right_sib = nullptr;
               }
               // try borrow from right sibling
               if (right_sib != nullptr && right_sib->RemoveOneStillValid(order)) {
@@ -470,7 +470,7 @@ class BPlusTree {
 
                   separation_value->key_ = tmp_key;
 
-                  cur_node->ptr_list_->push_back(right_sib->PopPtrListFront());
+                  cur_node->ptr_list_.push_back(right_sib->PopPtrListFront());
                 } else {
                   borrowed_value = right_sib->value_list_;
                   right_sib->value_list_ = borrowed_value->next_;
@@ -512,7 +512,7 @@ class BPlusTree {
                   else {
                     cur_node->value_list_->InsertFront(borrowed_value);
                     cur_node->value_list_ = borrowed_value;
-                    separation_value->key = cur_node->FindSmallestKey();
+                    separation_value->key_ = cur_node->FindSmallestKey();
                   }
                   separation_value->key_ = tmp_key;
                   cur_node->InsertPtrFront(left_sib->ptr_list_.back());
@@ -526,7 +526,7 @@ class BPlusTree {
                   else {
                     cur_node->value_list_->InsertFront(borrowed_value);
                     cur_node->value_list_ = borrowed_value;
-                    separation_value->key = cur_node->FindSmallestKey();
+                    separation_value->key_ = cur_node->FindSmallestKey();
                   }
                 }
                 left_sib->size_--;
@@ -572,7 +572,7 @@ class BPlusTree {
                   if (cur_node->value_list_ == nullptr)
                     cur_node->value_list_ = right_sib->value_list_;
                   else
-                    cur_node->value_list_->FindListEnd()->InsertEnd(right_sib->value_list_);
+                    cur_node->value_list_->FindListEnd()->InsertBack(right_sib->value_list_);
                   // detach and delete the separation value from parent
                   parent->DetachValueFromNode(separation_value);
                   delete separation_value;
@@ -609,10 +609,10 @@ class BPlusTree {
                   // detach
                   parent->DetachValueFromNode(separation_value);
                   // delete
-                  parent->ptr_list_->erase(parent->ptr_list_.begin() + sib_index);
+                  parent->ptr_list_.erase(parent->ptr_list_.begin() + sib_index);
                   // merge value list
-                  left_sib->value_list_->FindListEnd()->InsertEnd(separation_value);
-                  if (cur_node->value_list_ != nullptr) separation_value->InsertEnd(cur_node->value_list_);
+                  left_sib->value_list_->FindListEnd()->InsertBack(separation_value);
+                  if (cur_node->value_list_ != nullptr) separation_value->InsertBack(cur_node->value_list_);
                   cur_node->value_list_ = left_sib->value_list_;
                   cur_node->ptr_list_.insert(cur_node->ptr_list_.begin(), left_sib->ptr_list_.begin(),
                                              left_sib->ptr_list_.end());
@@ -622,10 +622,10 @@ class BPlusTree {
                   // detach
                   parent->DetachValueFromNode(separation_value);
                   // delete
-                  parent->ptr_list_->erase(parent->ptr_list_.begin() + sib_index);
+                  parent->ptr_list_.erase(parent->ptr_list_.begin() + sib_index);
                   delete separation_value;
                   if (cur_node->value_list_ != nullptr)
-                    left_sib->value_list_->FindListEnd()->InsertEnd(cur_node->value_list_);
+                    left_sib->value_list_->FindListEnd()->InsertBack(cur_node->value_list_);
                   cur_node->value_list_ = left_sib->value_list_;
                   parent->size_--;
                   cur_node->size_ += (left_sib->size_);
