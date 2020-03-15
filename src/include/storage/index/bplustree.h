@@ -871,6 +871,25 @@ class BPlusTree {
     }
   }
 
+  void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results) {
+    common::SpinLatch::ScopedSpinLatch guard(&latch_);
+    TreeNode *cur_node = root_->GetNodeRecursive(index_low_key);
+    while (cur_node != nullptr) {
+      auto cur = cur_node->value_list_;
+      while (cur != nullptr) {
+        if (cur->KeyCmpGreater(cur->key_, index_high_key)) return;
+        if (cur->KeyCmpGreater(cur->key_, index_low_key) || cur->KeyCmpEqual(cur->key_, index_low_key)) {
+          (*results).reserve((*results).size() + cur->GetAllValues().size());
+          for (auto value: cur->GetAllValues()) {
+            (*results).emplace_back(value);
+          }
+        }
+        cur = cur->next_;
+      }
+      cur_node = cur_node->right_sibling_;
+    }
+  }
+
   void GetValueDescending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
@@ -880,7 +899,9 @@ class BPlusTree {
         if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
         if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
           (*results).reserve((*results).size() + cur->GetAllValues().size());
-          (*results).insert((*results).end(), cur->GetAllValues().begin(), cur->GetAllValues().end());
+          for (auto value: cur->GetAllValues()) {
+            (*results).emplace_back(value);
+          }
         }
         cur = cur->next_;
       }
@@ -900,7 +921,9 @@ class BPlusTree {
         if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
         if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
           (*results).reserve((*results).size() + cur->GetAllValues().size());
-          (*results).insert((*results).end(), cur->GetAllValues().begin(), cur->GetAllValues().end());
+          for (auto value: cur->GetAllValues()) {
+            (*results).emplace_back(value);
+          }
           ++count;
           if (count == limit) return;
         }
