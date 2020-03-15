@@ -896,7 +896,6 @@ class BPlusTree {
 
   void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results, uint32_t limit) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
-    if (limit == 0) return;
     uint32_t count = 0;
     TreeNode *cur_node = root_->GetNodeRecursive(index_low_key);
     while (cur_node != nullptr) {
