@@ -921,9 +921,9 @@ class BPlusTree {
       while (cur != nullptr) {
         if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
         if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
-          auto value_list = &(cur->GetAllValues());
-          (*results).reserve((*results).size() + (*value_list).size());
-          for (auto value = (*value_list).rbegin(); value != (*value_list).rend(); ++value) {
+          auto value_list = (cur->GetAllValues());
+          (*results).reserve((*results).size() + (value_list).size());
+          for (auto value = (value_list).rbegin(); value != (value_list).rend(); ++value) {
             (*results).emplace_back(*value);
           }
         }
@@ -944,9 +944,9 @@ class BPlusTree {
       while (cur != nullptr) {
         if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
         if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
-          auto value_list = &(cur->GetAllValues());
-          (*results).reserve((*results).size() + (*value_list).size());
-          for (auto value = (*value_list).rbegin(); value != (*value_list).rend(); ++value) {
+          auto value_list = (cur->GetAllValues());
+          (*results).reserve((*results).size() + (value_list).size());
+          for (auto value = (value_list).rbegin(); value != (value_list).rend(); ++value) {
             (*results).emplace_back(*value);
           }
           ++count;
