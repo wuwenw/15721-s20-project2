@@ -837,8 +837,7 @@ class BPlusTree {
   }
   ~BPlusTree() { delete root_; }
 
-  bool Insert(KeyType key, ValueType value, bool allow_dup = true) {
-    common::SpinLatch::ScopedSpinLatch guard(&latch_);
+  bool InsertVanilla(KeyType key, ValueType value, bool allow_dup = true) {
     TreeNode *new_root = nullptr;
     TreeNode *leaf_node = root_->Insert(key, value, allow_dup);
     if (leaf_node == nullptr) return false;
@@ -847,7 +846,31 @@ class BPlusTree {
     root_ = new_root;
     return true;
   }
-  bool InsertUnique(KeyType key, ValueType value) { return Insert(key, value, false); }
+
+  bool Insert(KeyType key, ValueType value, bool allow_dup = true) {
+    if (allow_dup){
+      common::SpinLatch::ScopedSpinLatch guard(&latch_);
+      return InsertVanilla(key, value, allow_dup);
+    }
+    return InsertVanilla(key, value, allow_dup);
+    
+  }
+  bool InsertUnique(KeyType key, ValueType value, std::function<bool(const ValueType)> predicate,
+                    bool *predicate_satisfied) {
+    common::SpinLatch::ScopedSpinLatch guard(&latch_);
+    std::vector<ValueType> value_list;
+    GetValue(key, &value_list);
+    bool pred = true;
+    for (auto &val : value_list) {
+      if (predicate(val)) {
+        *predicate_satisfied = true;
+        return false;
+      }
+      if (this->root_->ValueCmpEqual(val, value)) return false;
+    }
+    if (pred) return Insert(key, value, false);
+    return false;
+  }
 
   bool Delete(KeyType key, ValueType value) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
@@ -859,7 +882,7 @@ class BPlusTree {
     return true;
   }
   void GetValue(KeyType index_key, std::vector<ValueType> *results) {
-    common::SpinLatch::ScopedSpinLatch guard(&latch_);
+    // common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *target_node = root_->GetNodeRecursive(index_key);
     auto *cur = target_node->value_list_;
     while (cur != nullptr) {
@@ -880,7 +903,7 @@ class BPlusTree {
         if (cur->KeyCmpGreater(cur->key_, index_high_key)) return;
         if (cur->KeyCmpGreater(cur->key_, index_low_key) || cur->KeyCmpEqual(cur->key_, index_low_key)) {
           (*results).reserve((*results).size() + cur->GetAllValues().size());
-          for (auto value: cur->GetAllValues()) {
+          for (auto value : cur->GetAllValues()) {
             (*results).emplace_back(value);
           }
         }
@@ -899,7 +922,7 @@ class BPlusTree {
         if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
         if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
           (*results).reserve((*results).size() + cur->GetAllValues().size());
-          for (auto value: cur->GetAllValues()) {
+          for (auto value : cur->GetAllValues()) {
             (*results).emplace_back(value);
           }
         }
@@ -921,7 +944,7 @@ class BPlusTree {
         if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
         if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
           (*results).reserve((*results).size() + cur->GetAllValues().size());
-          for (auto value: cur->GetAllValues()) {
+          for (auto value : cur->GetAllValues()) {
             (*results).emplace_back(value);
           }
           ++count;

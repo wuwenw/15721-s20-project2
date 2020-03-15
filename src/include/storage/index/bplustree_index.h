@@ -51,7 +51,7 @@ class BPlusTreeIndex final : public Index {
                    "This Insert is designed for secondary indexes with no uniqueness constraints.");
     KeyType index_key;
     index_key.SetFromProjectedRow(tuple, metadata_, metadata_.GetSchema().GetColumns().size());
-    const bool result = bplustree_->Insert(index_key, location);
+    const bool result = bplustree_->Insert(index_key, location, true);
 
     TERRIER_ASSERT(
         result,
@@ -79,25 +79,7 @@ class BPlusTreeIndex final : public Index {
       const auto is_visible = data_table->IsVisible(*txn, slot);
       return has_conflict || is_visible;
     };
-    bool pred = true;
-    std::vector<TupleSlot> value_list;
-    bplustree_->GetValue(index_key, &value_list);
-    for (TupleSlot &val : value_list) {
-      if (predicate(val)) {
-        predicate_satisfied = true;
-        pred = false;
-        break;
-      }
-    }
-    // FIXME(15-721 project2): perform a non-unique CONDITIONAL insert into the underlying data structure of the
-    // key/value pair
-    // if value already exists, insertion fails
-    bool result;
-    if (pred) {
-      result = bplustree_->InsertUnique(index_key, location);
-    } else {
-      result = false;
-    }
+    bool result = bplustree_->InsertUnique(index_key, location, predicate, &predicate_satisfied);
 
     TERRIER_ASSERT(predicate_satisfied != result, "If predicate is not satisfied then insertion should succeed.");
 
