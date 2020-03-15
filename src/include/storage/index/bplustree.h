@@ -923,8 +923,8 @@ class BPlusTree {
         if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
           auto value_list = (cur->GetAllValues());
           (*results).reserve((*results).size() + (value_list).size());
-          for (auto value = (value_list).rbegin(); value != (value_list).rend(); ++value) {
-            (*results).emplace_back(*value);
+          for (auto value : cur->GetAllValues()) {
+            (*results).emplace_back(value);
           }
         }
         cur = cur->next_;
