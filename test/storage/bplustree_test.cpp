@@ -295,9 +295,9 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->key_, 12);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->key_, 16);
 
-  for (int64_t i = 18; i < 100000; i++) {
-    tree->InsertUnique(i, i);
-  }
+//  for (int64_t i = 18; i < 100000; i++) {
+//    tree->InsertUnique(i, i);
+//  }
   // PrintTree(tree);
   delete tree;
 }
@@ -350,29 +350,29 @@ TEST_F(BPlusTreeTests, ComplexRandomInsert) {
   EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->key_, 25);
   EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 72);
   EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 78);
-  EXPECT_EQ(tree->InsertUnique(12, 12), false);
-  EXPECT_EQ(tree->InsertUnique(36, 36), false);
-  EXPECT_EQ(tree->InsertUnique(7, 7), false);
-  EXPECT_EQ(tree->InsertUnique(9, 9), false);
-  EXPECT_EQ(tree->InsertUnique(10, 10), false);
-  EXPECT_EQ(tree->InsertUnique(72, 72), false);
-  EXPECT_EQ(tree->InsertUnique(78, 78), false);
-  EXPECT_EQ(tree->InsertUnique(25, 25), false);
-  EXPECT_EQ(tree->InsertUnique(31, 31), false);
+//  EXPECT_EQ(tree->InsertUnique(12, 12), false);
+//  EXPECT_EQ(tree->InsertUnique(36, 36), false);
+//  EXPECT_EQ(tree->InsertUnique(7, 7), false);
+//  EXPECT_EQ(tree->InsertUnique(9, 9), false);
+//  EXPECT_EQ(tree->InsertUnique(10, 10), false);
+//  EXPECT_EQ(tree->InsertUnique(72, 72), false);
+//  EXPECT_EQ(tree->InsertUnique(78, 78), false);
+//  EXPECT_EQ(tree->InsertUnique(25, 25), false);
+//  EXPECT_EQ(tree->InsertUnique(31, 31), false);
 
   // PrintTree(tree);
   delete tree;
 }
-TEST_F(BPlusTreeTests, ManyInsert) {
-  // This defines the key space (0 ~ (1M - 1))
-  auto tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(8);
-
-  for (int64_t i = 18; i < 100000; i++) {
-    tree->InsertUnique(i, i);
-  }
-  // PrintTree(tree);
-  delete tree;
-}
+//TEST_F(BPlusTreeTests, ManyInsert) {
+//  // This defines the key space (0 ~ (1M - 1))
+//  auto tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(8);
+//
+//  for (int64_t i = 18; i < 100000; i++) {
+//    tree->InsertUnique(i, i);
+//  }
+//  // PrintTree(tree);
+//  delete tree;
+//}
 
 TEST_F(BPlusTreeTests, RandomDeletion) {
   // This defines the key space (0 ~ (1M - 1))
