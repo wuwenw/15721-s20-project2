@@ -855,8 +855,8 @@ class BPlusTree {
       }
       // increase the current node size as we insert a new value
       this->size_++;
-      left_child->parent_ = this;
-      right_child->parent_ = this;
+      if (left_child != nullptr) left_child->parent_ = this;
+      if (right_child != nullptr) right_child->parent_ = this;
     }
   };  // end TreeNode
 
