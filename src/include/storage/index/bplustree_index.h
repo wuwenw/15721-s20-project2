@@ -34,17 +34,35 @@ class BPlusTreeIndex final : public Index {
   const std::unique_ptr<BPlusTree<KeyType, TupleSlot>> bplustree_;
 
  public:
+  /**
+   * Return index type
+   * @return index type
+   */
   IndexType Type() const final { return IndexType::BPLUSTREE; }
 
+  /**
+   * perform GC
+   */
   void PerformGarbageCollection() final {
     // FIXME(15-721 project2): invoke garbage collection on the underlying data structure
   }
 
+  /**
+   * Get usage of heap
+   * @return size of used heap
+   */
   size_t GetHeapUsage() const final {
     // FIXME(15-721 project2): access the underlying data structure and report the heap usage
     return bplustree_->GetHeapUsage();
   }
 
+  /**
+   * Insert api
+   * @param txn transaction
+   * @param tuple key information
+   * @param location value to be inserted
+   * @return false if fail
+   */
   bool Insert(const common::ManagedPointer<transaction::TransactionContext> txn, const ProjectedRow &tuple,
               const TupleSlot location) final {
     TERRIER_ASSERT(!(metadata_.GetSchema().Unique()),
@@ -65,6 +83,13 @@ class BPlusTreeIndex final : public Index {
     return result;
   }
 
+  /**
+   * Insert uniqe api
+   * @param txn transaction
+   * @param tuple key information
+   * @param location value to be inserted
+   * @return false if fail
+   */
   bool InsertUnique(const common::ManagedPointer<transaction::TransactionContext> txn, const ProjectedRow &tuple,
                     const TupleSlot location) final {
     TERRIER_ASSERT(metadata_.GetSchema().Unique(), "This Insert is designed for indexes with uniqueness constraints.");
@@ -100,6 +125,12 @@ class BPlusTreeIndex final : public Index {
     return result;
   }
 
+  /**
+   * Delete api
+   * @param txn transaction
+   * @param tuple key information
+   * @param location value to be inserted
+   */
   void Delete(const common::ManagedPointer<transaction::TransactionContext> txn, const ProjectedRow &tuple,
               const TupleSlot location) final {
     KeyType index_key;
@@ -118,6 +149,12 @@ class BPlusTreeIndex final : public Index {
     });
   }
 
+  /**
+   * Scan api
+   * @param txn transaction
+   * @param key key
+   * @param value_list values
+   */
   void ScanKey(const transaction::TransactionContext &txn, const ProjectedRow &key,
                std::vector<TupleSlot> *value_list) final {
     TERRIER_ASSERT(value_list->empty(), "Result set should begin empty.");
@@ -144,6 +181,16 @@ class BPlusTreeIndex final : public Index {
                    "Invalid number of results for unique index.");
   }
 
+  /**
+   * ScanAscending api
+   * @param txn transaction
+   * @param scan_type type of scan
+   * @param num_attrs number of attributes
+   * @param low_key lower key
+   * @param high_key higher key
+   * @param limit limit of results
+   * @param value_list values
+   */
   void ScanAscending(const transaction::TransactionContext &txn, ScanType scan_type, uint32_t num_attrs,
                      ProjectedRow *low_key, ProjectedRow *high_key, uint32_t limit,
                      std::vector<TupleSlot> *value_list) final {
@@ -169,6 +216,13 @@ class BPlusTreeIndex final : public Index {
     }
   }
 
+  /**
+   * ScanDescending api
+   * @param txn transaction
+   * @param low_key lower key
+   * @param high_key higher key
+   * @param value_list values
+   */
   void ScanDescending(const transaction::TransactionContext &txn, const ProjectedRow &low_key,
                       const ProjectedRow &high_key, std::vector<TupleSlot> *value_list) final {
     TERRIER_ASSERT(value_list->empty(), "Result set should begin empty.");
@@ -187,6 +241,14 @@ class BPlusTreeIndex final : public Index {
     }
   }
 
+  /**
+   * ScanLimitDescending api
+   * @param txn transaction
+   * @param low_key lower key
+   * @param high_key higher key
+   * @param value_list values
+   * @param limit limit of results
+   */
   void ScanLimitDescending(const transaction::TransactionContext &txn, const ProjectedRow &low_key,
                            const ProjectedRow &high_key, std::vector<TupleSlot> *value_list,
                            const uint32_t limit) final {
