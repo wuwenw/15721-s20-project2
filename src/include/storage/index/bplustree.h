@@ -775,7 +775,7 @@ class BPlusTree {
                   left_sib->value_list_->FindListEnd()->AppendEnd(separation_value);
                   if (cur_node->value_list_ != nullptr) separation_value->AppendEnd(cur_node->value_list_);
                   cur_node->value_list_ = left_sib->value_list_;
-                  while (left_sib->ptr_list_.empty() > 0) {
+                  while (!left_sib->ptr_list_.empty()) {
                     cur_node->ptr_list_.insert(cur_node->ptr_list_.begin(), left_sib->ptr_list_.back());
                     left_sib->ptr_list_.back()->parent_ = cur_node;
                     left_sib->ptr_list_.pop_back();
