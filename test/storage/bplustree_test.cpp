@@ -20,10 +20,8 @@ void PrintNode(terrier::storage::index::BPlusTree<int64_t, int64_t>::TreeNode *n
   size_t idx = 0;
   // std::cerr<<"here\n";
   while (value != nullptr) {
-    std::cerr << value->key_ << ",";
     value = value->next_;
   }
-  std::cerr << ">>>>>\n";
   for (idx = 0; idx < node->ptr_list_.size(); idx++) {
     PrintNode(node->ptr_list_[idx]);
   }
@@ -295,9 +293,9 @@ TEST_F(BPlusTreeTests, NaiveRandomInsert) {
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->key_, 12);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[2]->value_list_->next_->key_, 16);
 
-//  for (int64_t i = 18; i < 100000; i++) {
-//    tree->InsertUnique(i, i);
-//  }
+  //  for (int64_t i = 18; i < 100000; i++) {
+  //    tree->InsertUnique(i, i);
+  //  }
   // PrintTree(tree);
   delete tree;
 }
@@ -350,20 +348,20 @@ TEST_F(BPlusTreeTests, ComplexRandomInsert) {
   EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->key_, 25);
   EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 72);
   EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 78);
-//  EXPECT_EQ(tree->InsertUnique(12, 12), false);
-//  EXPECT_EQ(tree->InsertUnique(36, 36), false);
-//  EXPECT_EQ(tree->InsertUnique(7, 7), false);
-//  EXPECT_EQ(tree->InsertUnique(9, 9), false);
-//  EXPECT_EQ(tree->InsertUnique(10, 10), false);
-//  EXPECT_EQ(tree->InsertUnique(72, 72), false);
-//  EXPECT_EQ(tree->InsertUnique(78, 78), false);
-//  EXPECT_EQ(tree->InsertUnique(25, 25), false);
-//  EXPECT_EQ(tree->InsertUnique(31, 31), false);
+  //  EXPECT_EQ(tree->InsertUnique(12, 12), false);
+  //  EXPECT_EQ(tree->InsertUnique(36, 36), false);
+  //  EXPECT_EQ(tree->InsertUnique(7, 7), false);
+  //  EXPECT_EQ(tree->InsertUnique(9, 9), false);
+  //  EXPECT_EQ(tree->InsertUnique(10, 10), false);
+  //  EXPECT_EQ(tree->InsertUnique(72, 72), false);
+  //  EXPECT_EQ(tree->InsertUnique(78, 78), false);
+  //  EXPECT_EQ(tree->InsertUnique(25, 25), false);
+  //  EXPECT_EQ(tree->InsertUnique(31, 31), false);
 
   // PrintTree(tree);
   delete tree;
 }
-//TEST_F(BPlusTreeTests, ManyInsert) {
+// TEST_F(BPlusTreeTests, ManyInsert) {
 //  // This defines the key space (0 ~ (1M - 1))
 //  auto tree = new terrier::storage::index::BPlusTree<int64_t, int64_t>(8);
 //
@@ -423,7 +421,8 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
                    3,10,15,19                              36,65                                  81,105,157
 
-  0,2    3,7,9    10,12    15,16   19,25,26       31,34   36,45   65,67,71      72,78,80   81,97   105,135,145   157,162,164,178
+  0,2    3,7,9    10,12    15,16   19,25,26       31,34   36,45   65,67,71      72,78,80   81,97   105,135,145
+  157,162,164,178
   */
   // level 1
   EXPECT_EQ(tree->root_->size_, 2);
@@ -471,8 +470,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
   EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[4]->value_list_->next_->key_, 25);
   EXPECT_EQ(tree->root_->ptr_list_[0]->ptr_list_[4]->value_list_->next_->next_->key_, 26);
 
-
-
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->size_, 2);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->value_list_->key_, 31);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[0]->value_list_->next_->key_, 34);
@@ -487,7 +484,8 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
                   3,10,15,19                                   36,72                                105,157
 
-  0,2    3,7,9    10,12    15,16   19,25,26        31,34    36,65,67,71    72,78,80       81,97     105,135,145     157,162,164,178
+  0,2    3,7,9    10,12    15,16   19,25,26        31,34    36,65,67,71    72,78,80       81,97     105,135,145
+  157,162,164,178
   */
   EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 105);
   EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 157);
@@ -500,25 +498,25 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
                   3,10,15,19                                   36,72                                 135,157
 
-  0,2    3,7,9    10,12    15,16   19,25,26        31,34    36,65,67,71    72,78,80        81,97     135,145     157,162,164,178
+  0,2    3,7,9    10,12    15,16   19,25,26        31,34    36,65,67,71    72,78,80        81,97     135,145
+  157,162,164,178
   */
   EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->key_, 135);
   EXPECT_EQ(tree->root_->ptr_list_[2]->value_list_->next_->key_, 157);
   EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->key_, 135);
   EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->next_->key_, 145);
   EXPECT_EQ(tree->root_->ptr_list_[2]->ptr_list_[1]->value_list_->next_->next_, nullptr);
-  
+
   PrintNode(tree->root_);
-  std::cerr << "Enter Deleting 97\n";
   tree->Delete(97, 97);
   PrintNode(tree->root_);
-  std::cerr << tree->root_->ptr_list_[1]->ptr_list_.size() << "\n";
   /*
                                                                31
 
                   3,10,15,19                                                             36,72,81,157
 
-  0,2    3,7,9    10,12    15,16   19,25,26                       31,34    36,65,67,71    72,78,80        81,135,145     157,162,164,178
+  0,2    3,7,9    10,12    15,16   19,25,26                       31,34    36,65,67,71    72,78,80        81,135,145
+  157,162,164,178
   */
   EXPECT_EQ(tree->root_->size_, 1);
   EXPECT_EQ(tree->root_->value_list_->key_, 31);
@@ -528,21 +526,21 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
   EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->key_, 72);
   EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->next_->key_, 81);
   EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->next_->next_->key_, 157);
-  
+
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_.size(), 5);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[3]->value_list_->key_, 81);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[3]->value_list_->next_->key_, 135);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[3]->value_list_->next_->next_->key_, 145);
-  
+
   tree->Delete(10, 10);
   /*
                                                                31
 
                   3,9,15,19                                                             36,72,81,157
 
-  0,2    3,7      9,12    15,16   19,25,26                       31,34    36,65,67,71    72,78,80        81,135,145     157,162,164,178
+  0,2    3,7      9,12    15,16   19,25,26                       31,34    36,65,67,71    72,78,80        81,135,145
+  157,162,164,178
   */
-  std::cerr << "---------------------------------- Post deleting 10 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(7, 7);
@@ -551,9 +549,9 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
                   3,15,19                                                             36,72,81,157
 
-  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,67,71    72,78,80        81,135,145     157,162,164,178
+  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,67,71    72,78,80        81,135,145
+  157,162,164,178
   */
-  std::cerr << "---------------------------------- Post deleting 7 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(78, 78);
@@ -562,9 +560,9 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
                   3,15,19                                                             36,72,81,157
 
-  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,67,71    72,80        81,135,145     157,162,164,178
+  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,67,71    72,80        81,135,145
+  157,162,164,178
   */
-  std::cerr << "---------------------------------- Post deleting 78 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(67, 67);
@@ -573,9 +571,8 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
                   3,15,19                                                             36,72,81,157
 
-  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,71    72,80        81,135,145     157,162,164,178
+  0,2    3,9,12    15,16   19,25,26                       31,34    36,65,71    72,80        81,135,145 157,162,164,178
   */
-  std::cerr << "---------------------------------- Post deleting 67 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(72, 72);
@@ -586,7 +583,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,2    3,9,12    15,16   19,25,26                       31,34    36,65,71    80,81    135,145     157,162,164,178
   */
-  std::cerr << "---------------------------------- Post deleting 72 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(157, 157);
@@ -597,7 +593,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,2    3,9,12    15,16   19,25,26                       31,34    36,65,71    80,81    135,145     162,164,178
   */
-  std::cerr << "---------------------------------- Post deleting 157 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(36, 36);
@@ -608,7 +603,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,2    3,9,12    15,16   19,25,26                       31,34    65,71    80,81    135,145     162,164,178
   */
-  std::cerr << "---------------------------------- Post deleting 36 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(81, 81);
@@ -619,7 +613,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,2    3,9,12    15,16   19,25,26                       31,34    65,71    80,135,145     162,164,178
   */
-  std::cerr << "---------------------------------- Post deleting 81 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(2, 2);
@@ -630,7 +623,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,3    9,12    15,16   19,25,26                       31,34    65,71    80,135,145     162,164,178
   */
-  std::cerr << "---------------------------------- Post deleting 2 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(164, 164);
@@ -641,7 +633,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,3    9,12    15,16   19,25,26                       31,34    65,71    80,135,145     162,178
   */
-  std::cerr << "---------------------------------- Post deleting 164 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(3, 3);
@@ -652,7 +643,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,9,12    15,16   19,25,26                       31,34    65,71    80,135,145     162,178
   */
-  std::cerr << "---------------------------------- Post deleting 3 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(34, 34);
@@ -663,7 +653,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,9,12    15,16   19,25,26                       31,65,71    80,135,145     162,178
   */
-  std::cerr << "---------------------------------- Post deleting 34 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(135, 135);
@@ -674,7 +663,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,9,12    15,16   19,25,26                       31,65,71    80,145     162,178
   */
-  std::cerr << "---------------------------------- Post deleting 135 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(26, 26);
@@ -685,9 +673,7 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,9,12    15,16   19,25                       31,65,71    80,145     162,178
   */
-  std::cerr << "---------------------------------- Post deleting 26 ---------------------\n";
-  if (tree->root_ == nullptr) std::cerr << "root is null\n";
-  PrintNode(tree->root_);
+  if (tree->root_ == nullptr) PrintNode(tree->root_);
 
   tree->Delete(178, 178);
   /*
@@ -695,7 +681,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,9,12    15,16     19,25     31,65,71    80,145,162
   */
-  std::cerr << "---------------------------------- Post deleting 178 ---------------------\n";
   PrintTree(tree);
 
   tree->Delete(162, 162);
@@ -704,7 +689,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   0,9,12    15,16     19,25     31,65,71    80,145
   */
-  std::cerr << "---------------------------------- Post deleting 162 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(0, 0);
@@ -713,7 +697,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   9,12    15,16     19,25     31,65,71    80,145
   */
-  std::cerr << "---------------------------------- Post deleting 0 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(16, 16);
@@ -722,7 +705,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   9,12    15,19,25     31,65,71    80,145
   */
-  std::cerr << "---------------------------------- Post deleting 16 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(19, 19);
@@ -731,16 +713,14 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   9,12    15,25     31,65,71    80,145
   */
-  std::cerr << "---------------------------------- Post deleting 19 ---------------------\n";
   PrintNode(tree->root_);
-  
+
   tree->Delete(65, 65);
   /*
                 15,31,80
 
   9,12    15,25     31,71    80,145
   */
-  std::cerr << "---------------------------------- Post deleting 65 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(12, 12);
@@ -749,7 +729,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   9,15,25     31,71    80,145
   */
-  std::cerr << "---------------------------------- Post deleting 12 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(15, 15);
@@ -758,7 +737,6 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   9,25     31,71    80,145
   */
-  std::cerr << "---------------------------------- Post deleting 15 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(9, 9);
@@ -767,50 +745,41 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   25,31,71    80,145
   */
-  std::cerr << "---------------------------------- Post deleting 9 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(80, 80);
   /*
   25,31,71,145
   */
-  std::cerr << "---------------------------------- Post deleting 80 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(25, 25);
   /*
   31,71,145
   */
-  std::cerr << "---------------------------------- Post deleting 25 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(145, 145);
   /*
   31,71
   */
-  std::cerr << "---------------------------------- Post deleting 145 ---------------------\n";
   PrintNode(tree->root_);
 
   tree->Delete(31, 31);
   /*
   71
   */
-  std::cerr << "---------------------------------- Post deleting 31 ---------------------\n";
   PrintNode(tree->root_);
   tree->Insert(71, 71);
   tree->Delete(71, 71);
   /*
-  */
-  std::cerr << "---------------------------------- Post deleting 71 ---------------------\n";
+   */
   PrintNode(tree->root_);
   tree->Delete(71, 71);
-  
 
   EXPECT_EQ(tree->root_->size_, 0);
   EXPECT_EQ(tree->root_->IsLeaf(), true);
   EXPECT_EQ(tree->root_->value_list_, nullptr);
-
-
 
   // PrintTree(tree);
   delete tree;

@@ -13,13 +13,13 @@ class BPlusTree {
   class BaseOp {
    public:
     // Key comparator
-    const KeyComparator key_cmp_obj_;
+    KeyComparator key_cmp_obj_;
     // Raw key eq checker
-    const KeyEqualityChecker key_eq_obj_;
+    KeyEqualityChecker key_eq_obj_;
     // Raw key hasher
     //    const KeyHashFunc key_hash_obj_;
     // Check whether values are equivalent
-    const ValueEqualityChecker value_eq_obj_;
+    ValueEqualityChecker value_eq_obj_;
 
     bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const { return key_cmp_obj_(key1, key2); }
     bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj_(key1, key2); }
@@ -124,7 +124,7 @@ class BPlusTree {
       return res;
     }
 
-    bool IsEmpty() { return same_key_values_.size() == 0; }
+    bool IsEmpty() { return same_key_values_.empty(); }
 
     InnerList *FindListEnd() {
       InnerList *cur = this;
@@ -397,9 +397,8 @@ class BPlusTree {
                   // if root is the leaf, then directly remove it
                   if (cur_node->IsLeaf()) {
                     cur_node->RemoveValueListFromLeaf(cur_value);
-                  }
+                  } else {
                   // if root has child, replace this value with the smallest key to its right
-                  else {
                     cur_value->key_ = cur_node->ptr_list_[right_ptr_index]->FindSmallestKey();
                   }
                   break;
@@ -408,8 +407,8 @@ class BPlusTree {
                 right_ptr_index++;
               }
             }
-          }  // end if cur_node == root
-          else {
+          } else {
+            // end if cur_node == root
             // check to see if there is value needed to be removed
             right_ptr_index = 1;
             cur_value = cur_node->value_list_;
@@ -419,9 +418,8 @@ class BPlusTree {
                 // if this is leaf, directly remove the value
                 if (cur_node->IsLeaf()) {
                   cur_node->RemoveValueListFromLeaf(cur_value);
-                }
-                // if non-leaf, replace it with the right hand side least key in leaf level
-                else {
+                } else {
+                  // if non-leaf, replace it with the right hand side least key in leaf level
                   cur_value->key_ = cur_node->ptr_list_[right_ptr_index]->FindSmallestKey();
                 }
                 break;
@@ -503,9 +501,7 @@ class BPlusTree {
                 }
                 right_sib->size_--;
                 cur_node->size_++;
-              }
-              // else try borrow from left sibling
-              else if (left_sib != nullptr && left_sib->RemoveOneStillValid(order)) {
+              } else if (left_sib != nullptr && left_sib->RemoveOneStillValid(order)) {
                 /*
                 require : parent separation value
                           right most value from left sib
@@ -525,9 +521,9 @@ class BPlusTree {
                   borrowed_value->prev_ = nullptr;
                   tmp_key = borrowed_value->key_;
                   borrowed_value->key_ = separation_value->key_;
-                  if (cur_node->value_list_ == nullptr)
+                  if (cur_node->value_list_ == nullptr) {
                     cur_node->value_list_ = borrowed_value;
-                  else {
+                  } else {
                     cur_node->value_list_->InsertFront(borrowed_value);
                     cur_node->value_list_ = borrowed_value;
                     separation_value->key_ = cur_node->FindSmallestKey();
@@ -539,9 +535,9 @@ class BPlusTree {
                   borrowed_value = left_sib->value_list_->FindListEnd();
                   borrowed_value->prev_->next_ = nullptr;
                   borrowed_value->prev_ = nullptr;
-                  if (cur_node->value_list_ == nullptr)
+                  if (cur_node->value_list_ == nullptr) {
                     cur_node->value_list_ = borrowed_value;
-                  else {
+                  } else {
                     cur_node->value_list_->InsertFront(borrowed_value);
                     cur_node->value_list_ = borrowed_value;
                     separation_value->key_ = cur_node->FindSmallestKey();
@@ -549,9 +545,8 @@ class BPlusTree {
                 }
                 left_sib->size_--;
                 cur_node->size_++;
-              }
-              // else try merge with right sibling if it is not the right most sibling
-              else if (right_sib != nullptr) {
+              } else if (right_sib != nullptr) {
+                // else try merge with right sibling if it is not the right most sibling
                 /*
                 require: right_sib,
                 if cur_node is not leaf
@@ -580,7 +575,7 @@ class BPlusTree {
                   borrowed_value = separation_value;
                   borrowed_value->AppendEnd(right_sib->value_list_);
                   // merge ptr list
-                  while (right_sib->ptr_list_.size() > 0) {
+                  while (!right_sib->ptr_list_.empty()) {
                     cur_node->ptr_list_.insert(cur_node->ptr_list_.begin() + cur_node->size_ + 1,
                                                right_sib->ptr_list_.back());
                     right_sib->ptr_list_.back()->parent_ = cur_node;
@@ -609,9 +604,8 @@ class BPlusTree {
                 }
                 right_sib->value_list_ = nullptr;  // set to nullptr to prevent value_list being deleted
                 delete right_sib;
-              }
-              // else try merge with left sibling
-              else {
+              } else {
+                // else try merge with left sibling
                 TERRIER_ASSERT(left_sib != nullptr, "left sibling should not be null otherwise tree not valid");
                 /*
                 require: left_sib,
@@ -637,7 +631,7 @@ class BPlusTree {
                   left_sib->value_list_->FindListEnd()->AppendEnd(separation_value);
                   if (cur_node->value_list_ != nullptr) separation_value->AppendEnd(cur_node->value_list_);
                   cur_node->value_list_ = left_sib->value_list_;
-                  while (left_sib->ptr_list_.size() > 0) {
+                  while (left_sib->ptr_list_.empty() > 0) {
                     cur_node->ptr_list_.insert(cur_node->ptr_list_.begin(), left_sib->ptr_list_.back());
                     left_sib->ptr_list_.back()->parent_ = cur_node;
                     left_sib->ptr_list_.pop_back();
@@ -848,12 +842,11 @@ class BPlusTree {
   }
 
   bool Insert(KeyType key, ValueType value, bool allow_dup = true) {
-    if (allow_dup){
+    if (allow_dup) {
       common::SpinLatch::ScopedSpinLatch guard(&latch_);
       return InsertVanilla(key, value, allow_dup);
     }
     return InsertVanilla(key, value, allow_dup);
-    
   }
   bool InsertUnique(KeyType key, ValueType value, std::function<bool(const ValueType)> predicate,
                     bool *predicate_satisfied) {
@@ -894,7 +887,8 @@ class BPlusTree {
     }
   }
 
-  void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results, uint32_t limit) {
+  void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results,
+                         uint32_t limit) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
     uint32_t count = 0;
     TreeNode *cur_node = root_->GetNodeRecursive(index_low_key);
@@ -916,25 +910,25 @@ class BPlusTree {
     }
   }
 
-//  void GetValueDescending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results) {
-//    common::SpinLatch::ScopedSpinLatch guard(&latch_);
-//    TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
-//    while (cur_node != nullptr) {
-//      auto cur = cur_node->value_list_->FindListEnd();
-//      while (cur != nullptr) {
-//        if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
-//        if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
-//          auto value_list = (cur->GetAllValues());
-//          (*results).reserve((*results).size() + (value_list).size());
-//          for (auto value : cur->GetAllValues()) {
-//            (*results).emplace_back(value);
-//          }
-//        }
-//        cur = cur->prev_;
-//      }
-//      cur_node = cur_node->left_sibling_;
-//    }
-//  }
+  //  void GetValueDescending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results) {
+  //    common::SpinLatch::ScopedSpinLatch guard(&latch_);
+  //    TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
+  //    while (cur_node != nullptr) {
+  //      auto cur = cur_node->value_list_->FindListEnd();
+  //      while (cur != nullptr) {
+  //        if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
+  //        if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
+  //          auto value_list = (cur->GetAllValues());
+  //          (*results).reserve((*results).size() + (value_list).size());
+  //          for (auto value : cur->GetAllValues()) {
+  //            (*results).emplace_back(value);
+  //          }
+  //        }
+  //        cur = cur->prev_;
+  //      }
+  //      cur_node = cur_node->left_sibling_;
+  //    }
+  //  }
 
   void GetValueDescendingLimited(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results,
                                  uint32_t limit) {
