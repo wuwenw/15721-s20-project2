@@ -170,34 +170,34 @@ class IndexBenchmark : public benchmark::Fixture {
 
 // Determine required time to run key lookup with BwTree structure for index
 // NOLINTNEXTLINE
-BENCHMARK_DEFINE_F(IndexBenchmark, BwTreeIndexRandomScanKey)(benchmark::State &state) {
-  // Create index using BwTree and populate associated table
-  CreateIndex(storage::index::IndexType::BWTREE);
-  PopulateTableAndIndex();
-  // NOLINTNEXTLINE
-  for (auto _ : state) {
-    // Run key lookup and record amount of time required in seconds
-    const auto total_ns = RunWorkload();
-    state.SetIterationTime(static_cast<double>(total_ns) / 1000000000.0);
-  }
-  // Determine total number of items processed
-  state.SetItemsProcessed(state.iterations() * table_size_);
-}
+//BENCHMARK_DEFINE_F(IndexBenchmark, BwTreeIndexRandomScanKey)(benchmark::State &state) {
+//  // Create index using BwTree and populate associated table
+//  CreateIndex(storage::index::IndexType::BWTREE);
+//  PopulateTableAndIndex();
+//  // NOLINTNEXTLINE
+//  for (auto _ : state) {
+//    // Run key lookup and record amount of time required in seconds
+//    const auto total_ns = RunWorkload();
+//    state.SetIterationTime(static_cast<double>(total_ns) / 1000000000.0);
+//  }
+//  // Determine total number of items processed
+//  state.SetItemsProcessed(state.iterations() * table_size_);
+//}
 
 // Determine required time to run key lookup with HashMap structure for index
 // NOLINTNEXTLINE
-BENCHMARK_DEFINE_F(IndexBenchmark, HashIndexRandomScanKey)(benchmark::State &state) {
-  CreateIndex(storage::index::IndexType::HASHMAP);
-  PopulateTableAndIndex();
-  // NOLINTNEXTLINE
-  for (auto _ : state) {
-    // Run key lookup and record amount of time required in seconds
-    const auto total_ns = RunWorkload();
-    state.SetIterationTime(static_cast<double>(total_ns) / 1000000000.0);
-  }
-  // Determine total number of items processed
-  state.SetItemsProcessed(state.iterations() * table_size_);
-}
+//BENCHMARK_DEFINE_F(IndexBenchmark, HashIndexRandomScanKey)(benchmark::State &state) {
+//  CreateIndex(storage::index::IndexType::HASHMAP);
+//  PopulateTableAndIndex();
+//  // NOLINTNEXTLINE
+//  for (auto _ : state) {
+//    // Run key lookup and record amount of time required in seconds
+//    const auto total_ns = RunWorkload();
+//    state.SetIterationTime(static_cast<double>(total_ns) / 1000000000.0);
+//  }
+//  // Determine total number of items processed
+//  state.SetItemsProcessed(state.iterations() * table_size_);
+//}
 
 // Determine required time to run key lookup with BwTree structure for index
 // NOLINTNEXTLINE
