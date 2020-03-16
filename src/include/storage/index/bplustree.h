@@ -993,9 +993,16 @@ class BPlusTree {
     }
   };  // end TreeNode
 
+  /// thread queue
+  std::queue<size_t> thread_queue_;
+  /// active reader
+  size_t active_reader_;
+  /// active writer
+  size_t active_writer_;
+  /// current id
+  size_t cur_id_;
   /// with parent node as empty for root
   TreeNode *root_;
-
   /// split when node > order_
   size_t order_;
 
@@ -1005,6 +1012,9 @@ class BPlusTree {
    */
   explicit BPlusTree(size_t order = 2) {
     order_ = order;
+    cur_id_ = 0;
+    active_reader_ = 0;
+    active_writer_ = 0;
     root_ = new TreeNode(nullptr);
   }
   /**
@@ -1013,11 +1023,77 @@ class BPlusTree {
   ~BPlusTree() { delete root_; }
 
   /**
-   * Perform insert and split node if necessary
-   * @param key insert key
-   * @param value insert value
-   * @param allow_dup if dup is allowed
-   * @return if the insertion succeeds
+   * Acquire ID
+   * @return write id
+   */
+  size_t AcquireWriteId() {
+    size_t cur_id = 0;
+    latch_.Lock();
+    cur_id = cur_id_;
+    cur_id_++;
+    thread_queue_.push(cur_id);
+    latch_.Unlock();
+    return cur_id;
+  }
+
+  /**
+   * Writer loop
+   * @param cur_id current id
+   */
+  void WriterWhileLoop(size_t cur_id) {
+    while (true) {
+      latch_.Lock();
+      if (thread_queue_.front() == cur_id && active_reader_ == 0 && active_writer_ == 0) {
+        thread_queue_.pop();
+        active_writer_++;
+        latch_.Unlock();
+        break;
+      }
+      latch_.Unlock();
+    }
+  }
+
+  /**
+   * Reader loop
+   * @param cur_id current id
+   */
+  void ReaderWhileLoop(size_t cur_id) {
+    while (true) {
+      latch_.Lock();
+      if (thread_queue_.front() == cur_id && active_writer_ == 0) {
+        thread_queue_.pop();
+        active_reader_++;
+        latch_.Unlock();
+        break;
+      }
+      latch_.Unlock();
+    }
+  }
+
+  /**
+   * Writer Release lock
+   */
+  void WriterRelease() {
+    latch_.Lock();
+    active_writer_--;
+    latch_.Unlock();
+  }
+
+  /**
+   * Reader Release lock
+   */
+  void ReaderRelease() {
+    latch_.Lock();
+    active_reader_--;
+    latch_.Unlock();
+  }
+
+  /**
+   * Base function for insert
+   * @param key key
+   * @param value value
+   * @param allow_dup if dups are allowed
+   * @return if insertion succeeds
    */
   bool InsertVanilla(KeyType key, ValueType value, bool allow_dup = true) {
     TreeNode *new_root = nullptr;
@@ -1037,11 +1113,16 @@ class BPlusTree {
    * @return if the insertion succeeds
    */
   bool Insert(KeyType key, ValueType value, bool allow_dup = true) {
+    bool res = false;
     if (allow_dup) {
-      common::SpinLatch::ScopedSpinLatch guard(&latch_);
-      return InsertVanilla(key, value, allow_dup);
+      size_t cur_id = AcquireWriteId();
+      WriterWhileLoop(cur_id);
+      res = InsertVanilla(key, value, allow_dup);
+      WriterRelease();
+      return res;
     }
-    return InsertVanilla(key, value, allow_dup);
+    res = InsertVanilla(key, value, allow_dup);
+    return res;
   }
 
   /**
@@ -1054,18 +1135,29 @@ class BPlusTree {
    */
   bool InsertUnique(KeyType key, ValueType value, std::function<bool(const ValueType)> predicate,
                     bool *predicate_satisfied) {
-    common::SpinLatch::ScopedSpinLatch guard(&latch_);
+    size_t cur_id = AcquireWriteId();
+    WriterWhileLoop(cur_id);
+    bool res = false;
     std::vector<ValueType> value_list;
     GetValue(key, &value_list);
     bool pred = true;
     for (auto &val : value_list) {
       if (predicate(val)) {
         *predicate_satisfied = true;
+        WriterRelease();
         return false;
       }
-      if (this->root_->ValueCmpEqual(val, value)) return false;
+      if (this->root_->ValueCmpEqual(val, value)) {
+        WriterRelease();
+        return false;
+      }
     }
-    if (pred) return Insert(key, value, false);
+    if (pred) {
+      res = Insert(key, value, false);
+      WriterRelease();
+      return res;
+    }
+    WriterRelease();
     return false;
   }
 
@@ -1076,12 +1168,17 @@ class BPlusTree {
    * @return if the deletion succeeds
    */
   bool Delete(KeyType key, ValueType value) {
-    common::SpinLatch::ScopedSpinLatch guard(&latch_);
+    size_t cur_id = AcquireWriteId();
+    WriterWhileLoop(cur_id);
     TreeNode *leaf_node = root_->GetNodeRecursive(key);
     TreeNode *new_root = root_->MergeFromLeaf(leaf_node, key, value, order_);
     // case when did not find proper key value pair to delete
-    if (new_root == nullptr) return false;
+    if (new_root == nullptr) {
+      WriterRelease();
+      return false;
+    }
     this->root_ = new_root;
+    WriterRelease();
     return true;
   }
 
@@ -1112,20 +1209,27 @@ class BPlusTree {
    */
   void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results,
                          uint32_t limit) {
-    common::SpinLatch::ScopedSpinLatch guard(&latch_);
+    size_t cur_id = AcquireWriteId();
+    ReaderWhileLoop(cur_id);
     uint32_t count = 0;
     TreeNode *cur_node = root_->GetNodeRecursive(index_low_key);
     while (cur_node != nullptr) {
       auto cur = cur_node->value_list_;
       while (cur != nullptr) {
-        if (cur->KeyCmpGreater(cur->key_, index_high_key)) return;
+        if (cur->KeyCmpGreater(cur->key_, index_high_key)) {
+          ReaderRelease();
+          return;
+        }
         if (cur->KeyCmpGreater(cur->key_, index_low_key) || cur->KeyCmpEqual(cur->key_, index_low_key)) {
           (*results).reserve((*results).size() + cur->GetAllValues().size());
           for (auto value : cur->GetAllValues()) {
             (*results).emplace_back(value);
           }
           ++count;
-          if (count == limit) return;
+          if (count == limit) {
+            ReaderRelease();
+            return;
+          }
         }
         cur = cur->next_;
       }
@@ -1142,13 +1246,17 @@ class BPlusTree {
    */
   void GetValueDescendingLimited(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results,
                                  uint32_t limit) {
-    common::SpinLatch::ScopedSpinLatch guard(&latch_);
+    size_t cur_id = AcquireWriteId();
+    ReaderWhileLoop(cur_id);
     uint32_t count = 0;
     TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
     while (cur_node != nullptr) {
       auto cur = cur_node->value_list_->FindListEnd();
       while (cur != nullptr) {
-        if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
+        if (cur->KeyCmpLess(cur->key_, index_low_key)) {
+          ReaderRelease();
+          return;
+        }
         if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
           auto value_list = cur->GetAllValues();
           (*results).reserve((*results).size() + (value_list).size());
@@ -1156,7 +1264,10 @@ class BPlusTree {
             (*results).emplace_back(value);
           }
           ++count;
-          if (count == limit) return;
+          if (count == limit) {
+            ReaderRelease();
+            return;
+          }
         }
         cur = cur->prev_;
       }
