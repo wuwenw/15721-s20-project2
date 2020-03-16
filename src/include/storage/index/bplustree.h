@@ -398,7 +398,7 @@ class BPlusTree {
                   if (cur_node->IsLeaf()) {
                     cur_node->RemoveValueListFromLeaf(cur_value);
                   } else {
-                  // if root has child, replace this value with the smallest key to its right
+                    // if root has child, replace this value with the smallest key to its right
                     cur_value->key_ = cur_node->ptr_list_[right_ptr_index]->FindSmallestKey();
                   }
                   break;
