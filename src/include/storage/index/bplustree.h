@@ -1016,12 +1016,12 @@ class BPlusTree {
 
   // Run a background loop to call both CollectTreeNodeGarbage and CollectInnerListGarbage every 10ms.
   void CollectTreeNodeGarbage const {
-    std::list<TreeNode*>::iterator it = garbage_treenodes.begin();
+    std::list<TreeNode*>::iterator it = garbage_treenodes_.begin();
     while (it != garbage_treenodes_.end()) {
       // Remove elements while iterating
       if ((*it) != nullptr) {
         delete (*it);
-        it = listOfInts.erase(it);
+        it = garbage_treenodes_.erase(it);
       } else
         it++;
     }
@@ -1033,7 +1033,7 @@ class BPlusTree {
       // Remove elements while iterating
       if ((*it) != nullptr) {
         delete (*it);
-        it = listOfInts.erase(it);
+        it = garbage_innerlistnodes_.erase(it);
       } else
         it++;
     }
