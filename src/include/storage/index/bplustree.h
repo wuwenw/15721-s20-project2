@@ -13,13 +13,13 @@ class BPlusTree {
   class BaseOp {
    public:
     // Key comparator
-    const KeyComparator key_cmp_obj_;
+    KeyComparator key_cmp_obj_;
     // Raw key eq checker
-    const KeyEqualityChecker key_eq_obj_;
+    KeyEqualityChecker key_eq_obj_;
     // Raw key hasher
     //    const KeyHashFunc key_hash_obj_;
     // Check whether values are equivalent
-    const ValueEqualityChecker value_eq_obj_;
+    ValueEqualityChecker value_eq_obj_;
 
     bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const { return key_cmp_obj_(key1, key2); }
     bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj_(key1, key2); }
@@ -894,8 +894,9 @@ class BPlusTree {
     }
   }
 
-  void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results) {
+  void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results, uint32_t limit) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
+    uint32_t count = 0;
     TreeNode *cur_node = root_->GetNodeRecursive(index_low_key);
     while (cur_node != nullptr) {
       auto cur = cur_node->value_list_;
@@ -906,6 +907,8 @@ class BPlusTree {
           for (auto value : cur->GetAllValues()) {
             (*results).emplace_back(value);
           }
+          ++count;
+          if (count == limit) return;
         }
         cur = cur->next_;
       }
@@ -913,44 +916,45 @@ class BPlusTree {
     }
   }
 
-  void GetValueDescending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results) {
-    common::SpinLatch::ScopedSpinLatch guard(&latch_);
-    TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
-    while (cur_node != nullptr) {
-      auto cur = cur_node->value_list_;
-      while (cur != nullptr) {
-        if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
-        if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
-          (*results).reserve((*results).size() + cur->GetAllValues().size());
-          for (auto value : cur->GetAllValues()) {
-            (*results).emplace_back(value);
-          }
-        }
-        cur = cur->next_;
-      }
-      cur_node = cur_node->left_sibling_;
-    }
-  }
+//  void GetValueDescending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results) {
+//    common::SpinLatch::ScopedSpinLatch guard(&latch_);
+//    TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
+//    while (cur_node != nullptr) {
+//      auto cur = cur_node->value_list_->FindListEnd();
+//      while (cur != nullptr) {
+//        if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
+//        if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
+//          auto value_list = (cur->GetAllValues());
+//          (*results).reserve((*results).size() + (value_list).size());
+//          for (auto value : cur->GetAllValues()) {
+//            (*results).emplace_back(value);
+//          }
+//        }
+//        cur = cur->prev_;
+//      }
+//      cur_node = cur_node->left_sibling_;
+//    }
+//  }
 
   void GetValueDescendingLimited(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results,
                                  uint32_t limit) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
-    if (limit == 0) return;
     uint32_t count = 0;
     TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
     while (cur_node != nullptr) {
-      auto cur = cur_node->value_list_;
+      auto cur = cur_node->value_list_->FindListEnd();
       while (cur != nullptr) {
         if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
         if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
-          (*results).reserve((*results).size() + cur->GetAllValues().size());
-          for (auto value : cur->GetAllValues()) {
+          auto value_list = cur->GetAllValues();
+          (*results).reserve((*results).size() + (value_list).size());
+          for (auto value : value_list) {
             (*results).emplace_back(value);
           }
           ++count;
           if (count == limit) return;
         }
-        cur = cur->next_;
+        cur = cur->prev_;
       }
       cur_node = cur_node->left_sibling_;
     }

@@ -162,7 +162,7 @@ class BPlusTreeIndex final : public Index {
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
     std::vector<TupleSlot> results;
-    bplustree_->GetValueAscending(index_low_key, index_high_key, &results);
+    bplustree_->GetValueAscending(index_low_key, index_high_key, &results, limit);
     value_list->reserve(results.size());
     for (const auto &result : results) {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
@@ -180,7 +180,7 @@ class BPlusTreeIndex final : public Index {
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
     std::vector<TupleSlot> results;
-    bplustree_->GetValueDescending(index_low_key, index_high_key, &results);
+    bplustree_->GetValueDescendingLimited(index_low_key, index_high_key, &results, 0);
     value_list->reserve(results.size());
     for (const auto &result : results) {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
