@@ -1002,6 +1002,43 @@ class BPlusTree {
     return count;
   }
 
+
+
+  // global list of nodes to delete.
+  // wherever there is "delete some_treenode_ptr", change it to
+  //  "garbege_treenode_list_.push_back(some_treenode_ptr)"
+
+  // wherever there is "delete someinnerlistnodeptr", change it to
+  //  "garbege_treenode_list_.push_back(some_innerlistnode_ptr)"
+
+  std::list <TreeNode *> garbage_treenodes_;
+  std::list <InnerList *> garbage_innerlistnodes_;
+
+  // Run a background loop to call both CollectTreeNodeGarbage and CollectInnerListGarbage every 10ms.
+  void CollectTreeNodeGarbage const {
+    std::list<TreeNode*>::iterator it = garbage_treenodes.begin();
+    while (it != garbage_treenodes_.end()) {
+      // Remove elements while iterating
+      if ((*it) != nullptr) {
+        delete (*it);
+        it = listOfInts.erase(it);
+      } else
+        it++;
+    }
+  }
+
+  void CollectInnerListGarbage const {
+    std::list<TreeNode*>::iterator it = garbage_innerlistnodes_.begin();
+    while (it != garbage_innerlistnodes_.end()) {
+      // Remove elements while iterating
+      if ((*it) != nullptr) {
+        delete (*it);
+        it = listOfInts.erase(it);
+      } else
+        it++;
+    }
+  }
+
  private:
   mutable common::SpinLatch latch_;
   TreeNode *RebalanceTree(TreeNode *leaf_node) {
