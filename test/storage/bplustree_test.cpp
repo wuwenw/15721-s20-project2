@@ -527,7 +527,7 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
   EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->next_->key_, 81);
   EXPECT_EQ(tree->root_->ptr_list_[1]->value_list_->next_->next_->next_->key_, 157);
 
-  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_.size(), 5);
+  EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_.size(), 2);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[3]->value_list_->key_, 81);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[3]->value_list_->next_->key_, 135);
   EXPECT_EQ(tree->root_->ptr_list_[1]->ptr_list_[3]->value_list_->next_->next_->key_, 145);
