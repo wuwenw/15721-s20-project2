@@ -5,11 +5,17 @@
 
 namespace terrier::storage::index {
 
+/**
+ * Base data structure of index, a standard bplus tree
+ */
 template <typename KeyType, typename ValueType, typename KeyComparator = std::less<KeyType>,
           typename KeyEqualityChecker = std::equal_to<KeyType>, typename KeyHashFunc = std::hash<KeyType>,
           typename ValueEqualityChecker = std::equal_to<ValueType>>
 class BPlusTree {
  public:
+  /**
+   * Base operations of the class
+   */
   class BaseOp {
    public:
     // Key comparator
@@ -29,6 +35,9 @@ class BPlusTree {
     //    size_t KeyHash(const KeyType &key) const { return key_hash_obj_(key); }
     bool ValueCmpEqual(const ValueType &val1, const ValueType &val2) const { return value_eq_obj_(val1, val2); }
   };
+  /**
+   * InnerList contains key and corresponding values. It also has pointers to the prev and next one.
+   */
   class InnerList : public BaseOp {
    public:
     KeyType key_;
@@ -36,7 +45,13 @@ class BPlusTree {
     InnerList *prev_;
     InnerList *next_;
     std::vector<ValueType> same_key_values_;
-    // standard constructor using key and value
+    /**
+     * standard constructor using key and value
+     * @param key key
+     * @param val value
+     * @param prev prev pointer
+     * @param next next pointer
+     */
     InnerList(KeyType key, ValueType val, InnerList *prev = nullptr, InnerList *next = nullptr) {
       key_ = key;
       value_ = val;
@@ -45,7 +60,10 @@ class BPlusTree {
       // push the first value into the same_key_values_ as well
       same_key_values_.push_back(val);
     }
-    // copy constructor to construct a InnerList from reference
+    /**
+     * copy constructor to construct a InnerList from reference
+     * @param reference reference of inner list
+     */
     explicit InnerList(InnerList *reference) {
       key_ = reference->key_;
       value_ = reference->value_;
@@ -54,7 +72,10 @@ class BPlusTree {
     }
     std::vector<ValueType> GetAllValues() { return same_key_values_; }
 
-    // insert at the fron of the current value node
+    /**
+     * insert at the front of the current value node
+     * @param new_value value
+     */
     void InsertFront(InnerList *new_value) {
       TERRIER_ASSERT(new_value != nullptr, "insertFront do not accept null InnerList to be inserted");
       InnerList *cur_value = this;
@@ -67,6 +88,10 @@ class BPlusTree {
       cur_value->prev_ = new_value;
     }
 
+    /**
+     * Insert at the back of list
+     * @param new_value value
+     */
     void InsertBack(InnerList *new_value) {
       TERRIER_ASSERT(new_value != nullptr, "insertBack do not accept null InnerList to be inserted");
       InnerList *cur_value = this;
@@ -79,6 +104,10 @@ class BPlusTree {
       new_value->prev_ = cur_value;
     }
 
+    /**
+     * append a new value at the end
+     * @param new_value value
+     */
     void AppendEnd(InnerList *new_value) {
       TERRIER_ASSERT(new_value != nullptr, "AppendEnd do not accept null InnerList to be inserted");
       InnerList *cur_value = this;
@@ -95,6 +124,11 @@ class BPlusTree {
       //      new_value->value_ = nullptr;
       delete new_value;
     }
+    /**
+     * check if ContainDupValue
+     * @param value value waited to be check
+     * @return if dup is contained
+     */
     bool ContainDupValue(ValueType value) {
       for (size_t i = 0; i < this->same_key_values_.size(); i++) {
         if (this->ValueCmpEqual((this->same_key_values_)[i], value)) return true;
@@ -136,6 +170,10 @@ class BPlusTree {
       return cur;
     }
   };  // end class InnerList
+  /**
+   * Bplus tree is composed of treenodes, which contains a parent, a value list and a pointer list if it is an insider,
+   * or siblings if it is a leaf.
+   */
   class TreeNode : public BaseOp {
    public:
     size_t size_;
@@ -822,15 +860,29 @@ class BPlusTree {
     }
   };  // end TreeNode
 
-  TreeNode *root_;  // with parent node as empty for root
-  size_t order_;    // split when node > order_
+  /// with parent node as empty for root
+  TreeNode *root_;
 
+  /// split when node > order_
+  size_t order_;
+
+  /**
+   * Constructor
+   * @param order
+   */
   explicit BPlusTree(size_t order = 2) {
     order_ = order;
     root_ = new TreeNode(nullptr);
   }
   ~BPlusTree() { delete root_; }
 
+  /**
+   * Perform insert and split node if necessary
+   * @param key insert key
+   * @param value insert value
+   * @param allow_dup if dup is allowed
+   * @return if the insertion succeeds
+   */
   bool InsertVanilla(KeyType key, ValueType value, bool allow_dup = true) {
     TreeNode *new_root = nullptr;
     TreeNode *leaf_node = root_->Insert(key, value, allow_dup);
@@ -841,6 +893,13 @@ class BPlusTree {
     return true;
   }
 
+  /**
+   * Insert
+   * @param key insert key
+   * @param value insert value
+   * @param allow_dup if dup is allowed
+   * @return if the insertion succeeds
+   */
   bool Insert(KeyType key, ValueType value, bool allow_dup = true) {
     if (allow_dup) {
       common::SpinLatch::ScopedSpinLatch guard(&latch_);
@@ -848,6 +907,15 @@ class BPlusTree {
     }
     return InsertVanilla(key, value, allow_dup);
   }
+
+  /**
+   * InsertUnique
+   * @param key insert key
+   * @param value insert value
+   * @param predicate predicate check
+   * @param predicate_satisfied result of predicate check
+   * @return if the insertion succeeds
+   */
   bool InsertUnique(KeyType key, ValueType value, std::function<bool(const ValueType)> predicate,
                     bool *predicate_satisfied) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
@@ -865,6 +933,12 @@ class BPlusTree {
     return false;
   }
 
+  /**
+   * Delete
+   * @param key insert key
+   * @param value insert value
+   * @return if the deletion succeeds
+   */
   bool Delete(KeyType key, ValueType value) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *leaf_node = root_->GetNodeRecursive(key);
@@ -874,6 +948,12 @@ class BPlusTree {
     this->root_ = new_root;
     return true;
   }
+
+  /**
+   * Get value
+   * @param index_key scan key
+   * @param results pointers to result vector
+   */
   void GetValue(KeyType index_key, std::vector<ValueType> *results) {
     // common::SpinLatch::ScopedSpinLatch guard(&latch_);
     TreeNode *target_node = root_->GetNodeRecursive(index_key);
@@ -887,6 +967,13 @@ class BPlusTree {
     }
   }
 
+  /**
+   * Get values by ascending order
+   * @param index_low_key lower scan key
+   * @param index_high_key higher scan key
+   * @param results pointers to result vector
+   * @param limit limit number of result. 0 == unlimited.
+   */
   void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results,
                          uint32_t limit) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
@@ -910,26 +997,13 @@ class BPlusTree {
     }
   }
 
-  //  void GetValueDescending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results) {
-  //    common::SpinLatch::ScopedSpinLatch guard(&latch_);
-  //    TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
-  //    while (cur_node != nullptr) {
-  //      auto cur = cur_node->value_list_->FindListEnd();
-  //      while (cur != nullptr) {
-  //        if (cur->KeyCmpLess(cur->key_, index_low_key)) return;
-  //        if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
-  //          auto value_list = (cur->GetAllValues());
-  //          (*results).reserve((*results).size() + (value_list).size());
-  //          for (auto value : cur->GetAllValues()) {
-  //            (*results).emplace_back(value);
-  //          }
-  //        }
-  //        cur = cur->prev_;
-  //      }
-  //      cur_node = cur_node->left_sibling_;
-  //    }
-  //  }
-
+  /**
+   * Get values by descending order
+   * @param index_low_key lower scan key
+   * @param index_high_key higher scan key
+   * @param results pointers to result vector
+   * @param limit limit number of result. 0 == unlimited.
+   */
   void GetValueDescendingLimited(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results,
                                  uint32_t limit) {
     common::SpinLatch::ScopedSpinLatch guard(&latch_);
@@ -954,6 +1028,10 @@ class BPlusTree {
     }
   }
 
+  /**
+   * Get heap usage of the tree
+   * @return size of used heap
+   */
   size_t GetHeapUsage() const {
     size_t total_usage = 0;
     if (root_ == nullptr) return 0;
@@ -968,6 +1046,11 @@ class BPlusTree {
     return total_usage;
   }
 
+  /**
+   * Get heap usage of a node
+   * @param node treenode
+   * @return size of used heap of a node
+   */
   size_t GetNodeHeapUsage(TreeNode *node) const {
     size_t count = 0;
     if (node == nullptr) return 0;
