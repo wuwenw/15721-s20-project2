@@ -20,8 +20,10 @@ void PrintNode(terrier::storage::index::BPlusTree<int64_t, int64_t>::TreeNode *n
   size_t idx = 0;
   // std::cerr<<"here\n";
   while (value != nullptr) {
+    std::cerr<< value->key_ << ",";
     value = value->next_;
   }
+  std::cerr << ">>>\n";
   for (idx = 0; idx < node->ptr_list_.size(); idx++) {
     PrintNode(node->ptr_list_[idx]);
   }
@@ -509,6 +511,7 @@ TEST_F(BPlusTreeTests, RandomDeletion) {
 
   PrintNode(tree->root_);
   tree->Delete(97, 97);
+  std::cerr << ">>>>>>> delete 97\n";
   PrintNode(tree->root_);
   /*
                                                                31
