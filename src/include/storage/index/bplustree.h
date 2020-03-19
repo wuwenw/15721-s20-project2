@@ -1589,7 +1589,7 @@ class BPlusTree {
     std::cerr << cur->thread_queue_.size()<< std::endl;
     if (cur->ptr_list_.empty()) return;
     for (auto node: cur->ptr_list_) {
-      checklock(TreeNode *node);
+      checklock(node);
     }
   }
   /**
