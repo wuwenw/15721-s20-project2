@@ -1442,15 +1442,135 @@ class BPlusTree {
     return true;
   }
 
+  void RangeUnLock(TreeNode *child, TreeNode *cur_node, int mode) {
+    TreeNode *cur = child;
+    while (cur != cur_node) {
+      cur->ReaderRelease();
+      if (mode == 0) {
+        cur = cur->right_sibling_;
+      } else {
+        cur = cur->left_sibling_;
+      }
+    }
+  }
+
+  void RangeLock(TreeNode *child, TreeNode *cur_node, size_t cur_id, int mode) {
+    TreeNode *cur = child;
+    while (cur != cur_node) {
+      cur->PushWriteId(cur_id);
+      cur->ReaderWhileLoop(cur_id);
+      if (mode == 0) {
+        cur = cur->right_sibling_;
+      } else {
+        cur = cur->left_sibling_;
+      }
+    }
+  }
+
+  TreeNode* FindFreeParent(TreeNode *cur_node, TreeNode *parent) {
+    if (cur_node == root_) return cur_node;
+    parent->latch_.Lock();
+    if(parent->thread_queue_.empty() && parent->active_writer_ == 0) {
+      parent->latch_.Unlock();
+      return cur_node;
+    }
+    else {
+      parent->latch_.Unlock();
+      return FindFreeParent(parent, parent->parent_);
+    }
+  }
+
+  //mode 0 - asending, 1 - desending
+  void LockLeafNode(TreeNode *cur_node, std::queue<TreeNodeUnion *> *path_queue, size_t cur_id, int mode) {
+    cur_node->latch_.Lock();
+    /* lock single leaf node */
+    if(cur_node->thread_queue_.empty() && cur_node->active_writer_ == 0) {
+      cur_node->active_reader_++;
+      TreeNodeUnion *t_union = new TreeNodeUnion();
+      t_union->tree_node_ = cur_node;
+      t_union->is_tree_ = false;
+      path_queue->push(t_union);
+      cur_node->latch_.Unlock();
+      return;
+    } else {
+      /* search for free parent */
+      cur_node->latch_.Unlock();
+      TreeNode *highest_busy_node = FindFreeParent(cur_node, cur_node->parent_);
+      TreeNode *child;
+      if (mode == 0) {
+        child = highest_busy_node->ptr_list_[0];
+        while (!child->IsLeaf()) child = child->ptr_list_[0];
+      } else {
+        child = highest_busy_node->ptr_list_[highest_busy_node->ptr_list_.size()-1];
+        while (!child->IsLeaf()) child = child->ptr_list_[highest_busy_node->ptr_list_.size()-1];
+      }
+
+      /* give up latches */
+      RangeUnLock(child, cur_node, mode);
+      /* try to lock the highest busy node */
+      highest_busy_node->PushWriteId(cur_id);
+      highest_busy_node->ReaderWhileLoop(cur_id);
+
+      RangeLock(child, cur_node, cur_id, mode);
+
+      cur_node->PushWriteId(cur_id);
+      cur_node->ReaderWhileLoop(cur_id);
+      TreeNodeUnion *t_union = new TreeNodeUnion();
+      t_union->tree_node_ = cur_node;
+      t_union->is_tree_ = false;
+      path_queue->push(t_union);
+
+      highest_busy_node->ReaderRelease();
+    }
+
+  }
+
+
+
+  /**
+* Recursivly find a node
+* @param index_key index key to be found
+* @return target node
+*/
+  TreeNode *GetNodeHelper(KeyType index_key, std::queue<TreeNodeUnion *> *path_queue, size_t cur_id) {
+    TreeNode *cur_node = root_;
+    TreeNodeUnion *t_union;
+    while (true) {
+      std::cerr<< "finding" << std::endl;
+      cur_node->PushWriteId(cur_id);
+      cur_node->ReaderWhileLoop(cur_id);
+      t_union = new TreeNodeUnion();
+      t_union->tree_node_ = cur_node;
+      t_union->is_tree_ = false;
+      path_queue->push(t_union);
+      if (cur_node->IsLeaf()) {
+        UnlockQueueTillNow(path_queue, cur_node, true);
+        return cur_node;
+      } else {
+        cur_node = cur_node->FindBestFitChild(index_key);
+      }
+    }
+  }
+
+
   /**
    * Get value
    * @param index_key scan key
    * @param results pointers to result vector
    */
   void GetValue(KeyType index_key, std::vector<ValueType> *results) {
-    // common::SpinLatch::ScopedSpinLatch guard(&latch_);
-    TreeNode *target_node = root_->GetNodeRecursive(index_key);
+    std::queue<TreeNodeUnion *> *path_queue = new std::queue<TreeNodeUnion *>();
+    TreeNodeUnion *t_union;
+    /******************* Concurrent node **********************/
+    size_t cur_id = AcquireWriteId();
+    t_union = new TreeNodeUnion();
+    t_union->is_tree_ = true;
+    t_union->tree_ = this;
+    path_queue->push(t_union);
+    /******************* Concurrent node **********************/
+    TreeNode *target_node = GetNodeHelper(index_key, path_queue, cur_id);
     auto *cur = target_node->value_list_;
+    std::cerr << "find target\n";
     while (cur != nullptr) {
       if (cur->KeyCmpEqual(index_key, cur->key_)) {
         *results = cur->GetAllValues();
@@ -1458,6 +1578,8 @@ class BPlusTree {
       }
       cur = cur->next_;
     }
+    UnlockQueue(path_queue, true);
+    std::cerr << "queue_size" << path_queue->size()<< std::endl;
   }
 
   /**
@@ -1469,15 +1591,24 @@ class BPlusTree {
    */
   void GetValueAscending(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results,
                          uint32_t limit) {
+    std::queue<TreeNodeUnion *> *path_queue = new std::queue<TreeNodeUnion *>();
+    TreeNodeUnion *t_union;
+    /******************* Concurrent node **********************/
     size_t cur_id = AcquireWriteId();
-    ReaderWhileLoop(cur_id);
+    t_union = new TreeNodeUnion();
+    t_union->is_tree_ = true;
+    t_union->tree_ = this;
+    path_queue->push(t_union);
+    /******************* Concurrent node **********************/
+    TreeNode *cur_node = GetNodeHelper(index_low_key, path_queue, cur_id);
+
     uint32_t count = 0;
-    TreeNode *cur_node = root_->GetNodeRecursive(index_low_key);
     while (cur_node != nullptr) {
+      LockLeafNode(cur_node, path_queue, cur_id, 0);
       auto cur = cur_node->value_list_;
       while (cur != nullptr) {
         if (cur->KeyCmpGreater(cur->key_, index_high_key)) {
-          ReaderRelease();
+          UnlockQueue(path_queue, true);
           return;
         }
         if (cur->KeyCmpGreater(cur->key_, index_low_key) || cur->KeyCmpEqual(cur->key_, index_low_key)) {
@@ -1487,7 +1618,7 @@ class BPlusTree {
           }
           ++count;
           if (count == limit) {
-            ReaderRelease();
+            UnlockQueue(path_queue, true);
             return;
           }
         }
@@ -1506,15 +1637,24 @@ class BPlusTree {
    */
   void GetValueDescendingLimited(KeyType index_low_key, KeyType index_high_key, std::vector<ValueType> *results,
                                  uint32_t limit) {
+    std::queue<TreeNodeUnion *> *path_queue = new std::queue<TreeNodeUnion *>();
+    TreeNodeUnion *t_union;
+    /******************* Concurrent node **********************/
     size_t cur_id = AcquireWriteId();
-    ReaderWhileLoop(cur_id);
+    t_union = new TreeNodeUnion();
+    t_union->is_tree_ = true;
+    t_union->tree_ = this;
+    path_queue->push(t_union);
+    /******************* Concurrent node **********************/
+    TreeNode *cur_node = GetNodeHelper(index_high_key, path_queue, cur_id);
+
     uint32_t count = 0;
-    TreeNode *cur_node = root_->GetNodeRecursive(index_high_key);
     while (cur_node != nullptr) {
+      LockLeafNode(cur_node, path_queue, cur_id, 1);
       auto cur = cur_node->value_list_->FindListEnd();
       while (cur != nullptr) {
         if (cur->KeyCmpLess(cur->key_, index_low_key)) {
-          ReaderRelease();
+          UnlockQueue(path_queue, true);
           return;
         }
         if (cur->KeyCmpLessEqual(cur->key_, index_high_key)) {
@@ -1525,7 +1665,7 @@ class BPlusTree {
           }
           ++count;
           if (count == limit) {
-            ReaderRelease();
+            UnlockQueue(path_queue, true);
             return;
           }
         }
