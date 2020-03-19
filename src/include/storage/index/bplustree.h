@@ -228,6 +228,8 @@ class BPlusTree {
       left_sibling_ = nullptr;
       right_sibling_ = nullptr;
       size_ = 0;
+      active_reader_ = 0;
+      active_writer_ = 0;
       while (value_list != nullptr) {
         size_++;
         value_list = value_list->next_;
@@ -1218,43 +1220,51 @@ class BPlusTree {
   void UnlockQueue(std::queue<TreeNodeUnion *> *path_queue, bool is_read) {
     TreeNodeUnion *t_union;
     while (path_queue->size() != 0) {
+      // std::cerr << "UnlockQueue\n";
       t_union = path_queue->front();
       if (t_union->is_tree_) {
         if (is_read)
           t_union->tree_->ReaderRelease();
         else
           t_union->tree_->WriterRelease();
+        t_union->tree_ = nullptr;
       } else {
         if (is_read)
           t_union->tree_node_->ReaderRelease();
         else
           t_union->tree_node_->WriterRelease();
+        t_union->tree_node_ = nullptr;
       }
       path_queue->pop();
       delete t_union;
     }
+    // std::cerr << "exit unlockQueue\n";
     delete path_queue;
   }
 
   void UnlockQueueTillNow(std::queue<TreeNodeUnion *> *path_queue, TreeNode *cur_node, bool is_read) {
     TreeNodeUnion *t_union;
     while (path_queue->size() != 0) {
+      // std::cerr << "UnlockQueueTillNoe\n";
       t_union = path_queue->front();
       if (t_union->is_tree_) {
         if (is_read)
           t_union->tree_->ReaderRelease();
         else
           t_union->tree_->WriterRelease();
+        t_union->tree_ = nullptr;
       } else {
         if (t_union->tree_node_ == cur_node) return;
         if (is_read)
           t_union->tree_node_->ReaderRelease();
         else
           t_union->tree_node_->WriterRelease();
+        t_union->tree_node_ = nullptr;
       }
       path_queue->pop();
       delete t_union;
     }
+    // std::cerr << "exit unlockQueueTillNow\n";
   }
 
   /**
@@ -1334,6 +1344,7 @@ class BPlusTree {
     TreeNode *cur_node = root_;
 
     while (true) {
+      // std::cerr << "InsertUnique\n";
       cur_node->PushWriteId(cur_id);
       cur_node->WriterWhileLoop(cur_id);
       t_union = new TreeNodeUnion();
@@ -1341,40 +1352,42 @@ class BPlusTree {
       t_union->is_tree_ = false;
       path_queue->push(t_union);
       if (cur_node->InsertOneStillValid(order_)) UnlockQueueTillNow(path_queue, cur_node, false);
-
+      // std::cerr << "pass 1\n";
       if (cur_node->IsLeaf()) {
         std::vector<ValueType> *value_list = nullptr;
         auto *cur = cur_node->value_list_;
         while (cur != nullptr) {
           if (cur->KeyCmpEqual(key, cur->key_)) {
-            *value_list = cur->GetAllValues();
+            value_list = &(cur->same_key_values_);
             break;
           }
           cur = cur->next_;
         }
-        if (cur == nullptr) {
-          UnlockQueue(path_queue, false);
-          return false;
-        }
-        for (auto &val : *value_list) {
-          if (predicate(val)) {
-            *predicate_satisfied = true;
-            UnlockQueue(path_queue, false);
-            return false;
+        if (cur != nullptr) {
+          // std::cerr << "pass 2\n";
+          for (auto &val : *value_list) {
+            if (predicate(val)) {
+              *predicate_satisfied = true;
+              UnlockQueue(path_queue, false);
+              return false;
+            }
+            if (this->root_->ValueCmpEqual(val, value)) {
+              UnlockQueue(path_queue, false);
+              return false;
+            }
           }
-          if (this->root_->ValueCmpEqual(val, value)) {
-            UnlockQueue(path_queue, false);
-            return false;
-          }
         }
+        // std::cerr << "pass 3\n";
         auto new_value = new InnerList(key, value);
         result = cur_node->InsertAtLeafNode(new_value, false);
         if (result == nullptr) delete new_value;
+        // std::cerr << "pass 4\n";
         break;
       } else {
         cur_node = cur_node->FindBestFitChild(key);
       }
     }
+    // std::cerr << "exit while loop\n";
 
     if (result == nullptr) {
       UnlockQueue(path_queue, false);
