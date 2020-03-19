@@ -275,7 +275,7 @@ class BPlusTree {
 
     /**
      * Acquire ID
-     * @return write id
+     * @param cur_id current id
      */
     void PushWriteId(size_t cur_id) {
       latch_.Lock();
@@ -486,6 +486,11 @@ class BPlusTree {
       }
       return result;
     }
+    /**
+     * Check if node is valid
+     * @param order order of a node
+     * @return if node is valid
+     */
     bool InsertOneStillValid(size_t order) { return this->size_ + 1 <= order; }
     /**
      * Check if node is valid
@@ -542,9 +547,11 @@ class BPlusTree {
      * @param key key
      * @param value value
      * @param order order
+     * @param free_list
      * @return merged tree node
      */
-    TreeNode *MergeFromLeaf(TreeNode *leaf_node, KeyType key, ValueType value, size_t order, std::vector<TreeNode*> *free_list) {
+    TreeNode *MergeFromLeaf(TreeNode *leaf_node, KeyType key, ValueType value, size_t order,
+                            std::vector<TreeNode *> *free_list) {
       // delete value from leaf node
       // find the proper value list
       TERRIER_ASSERT(leaf_node->IsLeaf(), "MergeFromLeaf should be called from leaf node");
@@ -969,55 +976,6 @@ class BPlusTree {
      */
     void InsertPtrFront(TreeNode *node_ptr) { ptr_list_.insert(ptr_list_.begin(), node_ptr); }
 
-    /*
-      mode:
-          1: insert
-          0: delete
-
-    */
-    // TreeNode *FindBestFitChildForWrite(KeyType key, std::queue<common::SpinLatch *> *path_queue, size_t mode) {
-    //   InnerList *cur_val = value_list_;
-    //   InnerList *next_val;
-    //   /*********  Write latch stepwise operation ***********/
-    //   path_queue->push(&write_latch_);
-    //   write_latch_.Lock();
-    //   if (mode == 1 && this->InsertOneStillValid()) {
-    //     while (path_queue->size() > 1) {
-    //       path_queue->front()->Unlock();
-    //       path_queue->pop();
-    //     }
-    //   } else if (mode == 0 && (!this->IsLeaf) && (!(this->ptr_list_[0]->IsLeaf)) &&
-    //              (this->RemoveOneStillValid())) { /* conditionals:
-    //                                                 mode is deletion
-    //                                                 this is not a leaf node
-    //                                                 this is not a parent of a leaf node
-    //                                                 this can satisfy delete one still valid
-    //                                               */
-    //     // delete has two cases, if the current non-leaf node's children are leaf, then it lock itself
-    //     // otherwise perform the same
-    //     while (path_queue->size() > 1) {
-    //       path_queue->front()->Unlock();
-    //       path_queue->pop();
-    //     }
-    //   }
-
-    //   /*********  Write latch stepwise operation ***********/
-    //   if (IsLeaf()) return this;
-    //   auto ptr_iter = ptr_list_.begin();  // left side of the ptr list
-    //   while (cur_val != nullptr) {
-    //     if (cur_val->KeyCmpGreater(cur_val->key_, key)) {
-    //       return (*ptr_iter)->FindBestFitChildForWrite(key, path_queue, mode);
-    //     }
-    //     next_val = cur_val->next_;
-    //     ++ptr_iter;
-    //     if (next_val == nullptr) return (*ptr_iter)->FindBestFitChildForWrite(key, path_queue, mode);
-    //     if (next_val->KeyCmpGreater(next_val->key_, key))
-    //       return (*ptr_iter)->FindBestFitChildForWrite(key, path_queue, mode);
-    //     cur_val = next_val;
-    //   }
-    //   return (*ptr_iter)->FindBestFitChildForWrite(key, path_queue, mode);
-    // }
-
     /**
      * merge two node
      * @param left_node left child
@@ -1202,15 +1160,23 @@ class BPlusTree {
   /// return struct of of the encapsulation for both tree and node
   using TreeNodeUnion = struct TreeNodeUnion {
     union {
+      // treenode of the ptr
       TreeNode *tree_node_;
+      // tree ptr
       BPlusTree *tree_;
     };
+    // true if the ptr is type tree
     bool is_tree_;
   };
 
+  /**
+   * Free the latch in the path queue
+   * @param path_queue path queue
+   * @param is_read whether the freed latch is from reader or writer
+   */
   void UnlockQueue(std::queue<TreeNodeUnion *> *path_queue, bool is_read) {
     TreeNodeUnion *t_union;
-    while (path_queue->size() != 0) {
+    while (!path_queue->empty()) {
       // std::cerr << "UnlockQueue\n";
       t_union = path_queue->front();
       if (t_union->is_tree_) {
@@ -1233,9 +1199,15 @@ class BPlusTree {
     delete path_queue;
   }
 
+  /**
+   * Free the latch in the path queue
+   * @param path_queue path queue
+   * @param cur_node until current node
+   * @param is_read whether the freed latch is from reader or writer
+   */
   void UnlockQueueTillNow(std::queue<TreeNodeUnion *> *path_queue, TreeNode *cur_node, bool is_read) {
     TreeNodeUnion *t_union;
-    while (path_queue->size() != 0) {
+    while (!path_queue->empty()) {
       // std::cerr << "UnlockQueueTillNoe\n";
       t_union = path_queue->front();
       if (t_union->is_tree_) {
@@ -1267,7 +1239,7 @@ class BPlusTree {
    */
   bool Insert(KeyType key, ValueType value, bool allow_dup = true) {
     TreeNode *new_root = nullptr;
-    std::queue<TreeNodeUnion *> *path_queue = new std::queue<TreeNodeUnion *>();
+    auto path_queue = new std::queue<TreeNodeUnion *>();
     TreeNodeUnion *t_union;
     bool removed = false;
     /******************* Concurrent node **********************/
@@ -1291,15 +1263,14 @@ class BPlusTree {
       if (cur_node->InsertOneStillValid(order_) && (!removed)) {
         UnlockQueueTillNow(path_queue, cur_node, false);
         removed = true;
-      } 
+      }
       if (cur_node->IsLeaf()) {
         auto new_value = new InnerList(key, value);
         result = cur_node->InsertAtLeafNode(new_value, true);
         if (result == nullptr) delete new_value;
         break;
-      } else {
-        cur_node = cur_node->FindBestFitChild(key);
       }
+      cur_node = cur_node->FindBestFitChild(key);
     }
 
     if (result == nullptr) {
@@ -1327,7 +1298,7 @@ class BPlusTree {
   bool InsertUnique(KeyType key, ValueType value, std::function<bool(const ValueType)> predicate,
                     bool *predicate_satisfied) {
     TreeNode *new_root = nullptr;
-    std::queue<TreeNodeUnion *> *path_queue = new std::queue<TreeNodeUnion *>();
+    auto path_queue = new std::queue<TreeNodeUnion *>();
     TreeNodeUnion *t_union;
     bool removed = false;
     /******************* Concurrent node **********************/
@@ -1352,7 +1323,7 @@ class BPlusTree {
       if (cur_node->InsertOneStillValid(order_) && (!removed)) {
         UnlockQueueTillNow(path_queue, cur_node, false);
         removed = true;
-      } 
+      }
       // std::cerr << "pass 1\n";
       if (cur_node->IsLeaf()) {
         std::vector<ValueType> *value_list = nullptr;
@@ -1384,9 +1355,8 @@ class BPlusTree {
         if (result == nullptr) delete new_value;
         // std::cerr << "pass 4\n";
         break;
-      } else {
-        cur_node = cur_node->FindBestFitChild(key);
       }
+      cur_node = cur_node->FindBestFitChild(key);
     }
 
     if (result == nullptr) {
@@ -1410,7 +1380,7 @@ class BPlusTree {
    * @return if the deletion succeeds
    */
   bool Delete(KeyType key, ValueType value) {
-    std::queue<TreeNodeUnion *> *path_queue = new std::queue<TreeNodeUnion *>();
+    auto path_queue = new std::queue<TreeNodeUnion *>();
     TreeNodeUnion *t_union;
     bool removed = false;
     /******************* Concurrent node **********************/
@@ -1434,15 +1404,14 @@ class BPlusTree {
       if (cur_node->RemoveOneStillValid(order_) && (!removed)) {
         UnlockQueueTillNow(path_queue, cur_node, false);
         removed = true;
-      } 
+      }
       if (cur_node->IsLeaf()) {
         result = cur_node;
         break;
-      } else {
-        cur_node = cur_node->FindBestFitChild(key);
       }
+      cur_node = cur_node->FindBestFitChild(key);
     }
-    std::vector<TreeNode *> *free_list = new std::vector<TreeNode*>();
+    auto free_list = new std::vector<TreeNode *>();
     TreeNode *new_root = root_->MergeFromLeaf(result, key, value, order_, free_list);
     // case when did not find proper key value pair to delete
     if (new_root == nullptr) {
