@@ -288,11 +288,7 @@ class BPlusTree {
      * @param cur_id current id
      */
     void WriterWhileLoop(size_t cur_id) {
-      std::cerr<<active_reader_<<std::endl;
-      std::cerr<<active_writer_<<std::endl;
-      std::cerr<<thread_queue_.size()<<std::endl;
-      std::cerr<<cur_id<<std::endl;
-      std::cerr<<thread_queue_.front()<<std::endl;
+
       
       while (true) {
         latch_.Lock();
@@ -313,7 +309,7 @@ class BPlusTree {
     void ReaderWhileLoop(size_t cur_id) {
       while (true) {
         latch_.Lock();
-        std::cerr << "waiting reader" << std::endl;
+
         if (thread_queue_.front() == cur_id && active_writer_ == 0) {
           thread_queue_.pop();
           active_reader_++;
@@ -1196,7 +1192,7 @@ class BPlusTree {
   void UnlockQueue(std::queue<TreeNodeUnion *> *path_queue, bool is_read) {
     TreeNodeUnion *t_union;
     while (!path_queue->empty()) {
-      // std::cerr << "UnlockQueue\n";
+
       t_union = path_queue->front();
       if (t_union->is_tree_) {
         if (is_read)
@@ -1543,7 +1539,7 @@ class BPlusTree {
     TreeNode *cur_node = root_;
     TreeNodeUnion *t_union;
     while (true) {
-      std::cerr<< "finding" << std::endl;
+
       cur_node->PushWriteId(cur_id);
       cur_node->ReaderWhileLoop(cur_id);
       t_union = new TreeNodeUnion();
@@ -1570,6 +1566,7 @@ class BPlusTree {
     TreeNodeUnion *t_union;
     /******************* Concurrent node **********************/
     size_t cur_id = AcquireWriteId();
+    ReaderWhileLoop(cur_id)
     t_union = new TreeNodeUnion();
     t_union->is_tree_ = true;
     t_union->tree_ = this;
@@ -1577,7 +1574,7 @@ class BPlusTree {
     /******************* Concurrent node **********************/
     TreeNode *target_node = GetNodeHelper(index_key, path_queue, cur_id);
     auto *cur = target_node->value_list_;
-    std::cerr << "find target\n";
+
     while (cur != nullptr) {
       if (cur->KeyCmpEqual(index_key, cur->key_)) {
         *results = cur->GetAllValues();
@@ -1586,19 +1583,10 @@ class BPlusTree {
       cur = cur->next_;
     }
     UnlockQueue(path_queue, true);
-    std::cerr << "queue_size" << path_queue->size()<< std::endl;
-    checklock(root_);
+
+
   }
-  void checklock(TreeNode *cur){
-    if (cur == nullptr) return;
-    std::cerr << cur->active_reader_<< std::endl;
-    std::cerr << cur->active_writer_<< std::endl;
-    std::cerr << cur->thread_queue_.size()<< std::endl;
-    if (cur->ptr_list_.empty()) return;
-    for (auto node: cur->ptr_list_) {
-      checklock(node);
-    }
-  }
+
   /**
    * Get values by ascending order
    * @param index_low_key lower scan key
@@ -1612,6 +1600,7 @@ class BPlusTree {
     TreeNodeUnion *t_union;
     /******************* Concurrent node **********************/
     size_t cur_id = AcquireWriteId();
+    ReaderWhileLoop(cur_id)
     t_union = new TreeNodeUnion();
     t_union->is_tree_ = true;
     t_union->tree_ = this;
@@ -1658,6 +1647,7 @@ class BPlusTree {
     TreeNodeUnion *t_union;
     /******************* Concurrent node **********************/
     size_t cur_id = AcquireWriteId();
+    ReaderWhileLoop(cur_id)
     t_union = new TreeNodeUnion();
     t_union->is_tree_ = true;
     t_union->tree_ = this;
