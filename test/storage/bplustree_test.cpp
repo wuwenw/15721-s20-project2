@@ -814,10 +814,12 @@ TEST_F(BPlusTreeTests, SequentialScanTest) {
   std::vector<int64_t> keys;
   std::vector<int64_t> results;
   keys.reserve(key_num);
+
   for (int64_t i = 0; i < key_num; i++) {
     keys.emplace_back(i);
     tree->Insert(keys[i], keys[i]);
   }
+  std::cerr << "insert finish\n";
   for (int64_t i = 0; i < key_num; i++) {
     tree->GetValue(keys[i], &results);
     EXPECT_EQ(results, std::vector<int64_t>(1, keys[i]));

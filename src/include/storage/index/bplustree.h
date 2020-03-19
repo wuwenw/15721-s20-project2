@@ -1549,6 +1549,7 @@ class BPlusTree {
     /******************* Concurrent node **********************/
     TreeNode *target_node = GetNodeHelper(index_key, path_queue, cur_id);
     auto *cur = target_node->value_list_;
+    std::cerr << "find target\n";
     while (cur != nullptr) {
       if (cur->KeyCmpEqual(index_key, cur->key_)) {
         *results = cur->GetAllValues();
