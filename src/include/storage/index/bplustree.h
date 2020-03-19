@@ -1566,7 +1566,7 @@ class BPlusTree {
     TreeNodeUnion *t_union;
     /******************* Concurrent node **********************/
     size_t cur_id = AcquireWriteId();
-    ReaderWhileLoop(cur_id)
+    ReaderWhileLoop(cur_id);
     t_union = new TreeNodeUnion();
     t_union->is_tree_ = true;
     t_union->tree_ = this;
@@ -1600,7 +1600,7 @@ class BPlusTree {
     TreeNodeUnion *t_union;
     /******************* Concurrent node **********************/
     size_t cur_id = AcquireWriteId();
-    ReaderWhileLoop(cur_id)
+    ReaderWhileLoop(cur_id);
     t_union = new TreeNodeUnion();
     t_union->is_tree_ = true;
     t_union->tree_ = this;
@@ -1647,7 +1647,7 @@ class BPlusTree {
     TreeNodeUnion *t_union;
     /******************* Concurrent node **********************/
     size_t cur_id = AcquireWriteId();
-    ReaderWhileLoop(cur_id)
+    ReaderWhileLoop(cur_id);
     t_union = new TreeNodeUnion();
     t_union->is_tree_ = true;
     t_union->tree_ = this;
