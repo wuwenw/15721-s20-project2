@@ -289,6 +289,7 @@ class BPlusTree {
      */
     void WriterWhileLoop(size_t cur_id) {
       while (true) {
+        std::cerr << "waiting writer" << std::endl;
         latch_.Lock();
         if (thread_queue_.front() == cur_id && active_reader_ == 0 && active_writer_ == 0) {
           thread_queue_.pop();
@@ -307,6 +308,7 @@ class BPlusTree {
     void ReaderWhileLoop(size_t cur_id) {
       while (true) {
         latch_.Lock();
+        std::cerr << "waiting reader" << std::endl;
         if (thread_queue_.front() == cur_id && active_writer_ == 0) {
           thread_queue_.pop();
           active_reader_++;
