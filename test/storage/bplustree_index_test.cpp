@@ -566,7 +566,7 @@ TEST_F(BPlusTreeIndexTests, UniqueKey1) {
   unique_index_->ScanKey(*txn1, *scan_key_pr, &results);
   EXPECT_EQ(results.size(), 0);
   results.clear();
-
+std::cerr << "finish txn1 scan" << std::endl;
   // txn 1 inserts into table
   insert_redo = txn1->StageWrite(CatalogTestUtil::TEST_DB_OID, CatalogTestUtil::TEST_TABLE_OID, tuple_initializer_);
   insert_tuple = insert_redo->Delta();
@@ -581,7 +581,7 @@ TEST_F(BPlusTreeIndexTests, UniqueKey1) {
   txn_manager_->Abort(txn1);
 
   txn_manager_->Commit(txn0, transaction::TransactionUtil::EmptyCallback, nullptr);
-
+std::cerr << "start txn2" << std::endl;
   auto *txn2 = txn_manager_->BeginTransaction();
 
   // txn 2 scans index and gets a visible, correct result
