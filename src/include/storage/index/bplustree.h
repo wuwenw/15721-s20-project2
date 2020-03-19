@@ -306,6 +306,7 @@ class BPlusTree {
      */
     void ReaderWhileLoop(size_t cur_id) {
       while (true) {
+        std::cerr<<"waiting" << std::endl;
         latch_.Lock();
         if (thread_queue_.front() == cur_id && active_writer_ == 0) {
           thread_queue_.pop();
@@ -1554,6 +1555,7 @@ class BPlusTree {
     TreeNode *cur_node = root_;
     TreeNodeUnion *t_union;
     while (true) {
+      std::cerr<< "finding" << std::endl;
       cur_node->PushWriteId(cur_id);
       cur_node->ReaderWhileLoop(cur_id);
       t_union = new TreeNodeUnion();
@@ -1596,6 +1598,7 @@ class BPlusTree {
       cur = cur->next_;
     }
     UnlockQueue(path_queue, true);
+    std::cerr << "queue_size" << path_queue->size()<< std::endl;
   }
 
   /**
