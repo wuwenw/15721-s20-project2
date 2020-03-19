@@ -1581,7 +1581,7 @@ class BPlusTree {
 
     uint32_t count = 0;
     while (cur_node != nullptr) {
-      TryLockLeaf(cur_node, path_queue, cur_id, 0);
+      LockLeafNode(cur_node, path_queue, cur_id, 0);
       auto cur = cur_node->value_list_;
       while (cur != nullptr) {
         if (cur->KeyCmpGreater(cur->key_, index_high_key)) {
@@ -1627,7 +1627,7 @@ class BPlusTree {
 
     uint32_t count = 0;
     while (cur_node != nullptr) {
-      TryLockLeaf(cur_node, path_queue, cur_id, 1);
+      LockLeafNode(cur_node, path_queue, cur_id, 1);
       auto cur = cur_node->value_list_->FindListEnd();
       while (cur != nullptr) {
         if (cur->KeyCmpLess(cur->key_, index_low_key)) {
