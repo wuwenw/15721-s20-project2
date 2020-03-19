@@ -1523,7 +1523,7 @@ class BPlusTree {
       t_union->is_tree_ = false;
       path_queue->push(t_union);
       if (cur_node->IsLeaf()) {
-        UnlockQueueTillNow(*path_queue, cur_node, true);
+        UnlockQueueTillNow(path_queue, cur_node, true);
         return cur_node;
       } else {
         cur_node = cur_node->FindBestFitChild(index_key);
