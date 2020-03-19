@@ -1580,8 +1580,18 @@ class BPlusTree {
     }
     UnlockQueue(path_queue, true);
     std::cerr << "queue_size" << path_queue->size()<< std::endl;
+    checklock(root_);
   }
-
+  void checklock(TreeNode *cur){
+    if (cur == nullptr) return;
+    std::cerr << cur->active_reader_<< std::endl;
+    std::cerr << cur->active_writer_<< std::endl;
+    std::cerr << cur->thread_queue_.size()<< std::endl;
+    if (cur->ptr_list_.empty()) return;
+    for (auto node: cur->ptr_list_) {
+      checklock(TreeNode *node);
+    }
+  }
   /**
    * Get values by ascending order
    * @param index_low_key lower scan key
