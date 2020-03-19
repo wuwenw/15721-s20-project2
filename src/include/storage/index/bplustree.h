@@ -292,6 +292,7 @@ class BPlusTree {
       std::cerr<<active_writer_<<std::endl;
       std::cerr<<thread_queue_.size()<<std::endl;
       std::cerr<<cur_id<<std::endl;
+      std::cerr<<thread_queue_.front()<<std::endl;
       
       while (true) {
         latch_.Lock();
